@@ -56,7 +56,7 @@ impl<'a> Iterator for ConfigParser<'a> {
                     .config
                     .book
                     .authors
-                    .get(0)
+                    .first()
                     .expect("author in author list");
                 Some(Event::Author(author.clone().into()))
             }
