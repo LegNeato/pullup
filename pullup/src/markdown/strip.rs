@@ -18,16 +18,13 @@ converter!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::markdown::*;
     use crate::markdown::CowStr;
+    use crate::markdown::*;
     use similar_asserts::assert_eq;
-    use std::num::NonZeroU8;
 
     // Set up type names so they are clearer and more succint.
     use crate::markdown::Event as MdEvent;
     use crate::markdown::Tag as MdTag;
-    use crate::typst::Event as TypstEvent;
-    use crate::typst::Tag as TypstTag;
 
     /// Markdown docs:
     /// * https://spec.commonmark.org/0.30/#html-blocks
@@ -49,7 +46,7 @@ is anybody in there?
             self::assert_eq!(
                 i.collect::<Vec<markdown::Event>>(),
                 vec![
-                    MdEvent::Start(Tag::Heading(HeadingLevel::H1, None, vec![])),
+                    MdEvent::Start(MdTag::Heading(HeadingLevel::H1, None, vec![])),
                     MdEvent::Text(CowStr::Borrowed("Hello")),
                     MdEvent::End(MdTag::Heading(HeadingLevel::H1, None, vec![])),
                     MdEvent::Start(MdTag::Paragraph),
