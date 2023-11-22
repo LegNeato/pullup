@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule: [cron: "40 1 * * *"]
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  stable:
+    name: Rust ${{matrix.rust}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, beta]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.rust}}
+      - run: cd pullup && cargo build
+      - run: cd pullup && cargo build --no-default-features
+      - run: cd pullup && cargo build --all-features
+      - run: cd pullup && cargo build --no-default-features --features builder
+      - run: cd pullup && cargo build --no-default-features --features markdown
+      - run: cd pullup && cargo build --no-default-features --features mdbook
+      - run: cd pullup && cargo build --no-default-features --features typst
+      - run: cd pullup && cargo test --features markdown,mdbook
+      - run: cd pullup && cargo test --features markdown,typst
+      - run: cd pullup && cargo test --features mdbook,typst
+      - run: cd pulldown_mdbook && cargo build
+      - run: cd pulldown_mdbook && cargo test
+      - run: cd pulldown_typst && cargo build
+      - run: cd pulldown_typst && cargo test
+
+  nightly:
+    name: Rust nightly ${{matrix.os == 'windows' && '(windows)' || ''}}
+    runs-on: ${{matrix.os}}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu, windows]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cd pullup && cargo build
+      - run: cd pullup && cargo build --no-default-features
+      - run: cd pullup && cargo build --all-features
+      - run: cd pullup && cargo build --no-default-features --features builder
+      - run: cd pullup && cargo build --no-default-features --features markdown
+      - run: cd pullup && cargo build --no-default-features --features mdbook
+      - run: cd pullup && cargo build --no-default-features --features typst
+      - run: cd pullup && cargo test --features markdown,mdbook
+      - run: cd pullup && cargo test --features markdown,typst
+      - run: cd pullup && cargo test --features mdbook,typst
+      - run: cd pulldown_mdbook && cargo build
+      - run: cd pulldown_mdbook && cargo test
+      - run: cd pulldown_typst && cargo build
+      - run: cd pulldown_typst && cargo test
+
+  doc:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUSTDOCFLAGS: -Dwarnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/install@cargo-docs-rs
+      - run: cargo docs-rs -p pullup
+      - run: cargo docs-rs -p pulldown_mdbook
+      - run: cargo docs-rs -p pulldown_typst
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@clippy
+      - run: cd pullup && cargo clippy -- -Dclippy::all
+      - run: cd pullup && cargo clippy --no-default-features -- -Dclippy::all
+      - run: cd pullup && cargo clippy --all-features -- -Dclippy::all
+      - run: cd pulldown_mdbook && cargo clippy -- -Dclippy::all
+      - run: cd pulldown_typst && cargo clippy -- -Dclippy::all
+
+  outdated:
+    name: Outdated
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/install@cargo-outdated
+      - run: cargo outdated --workspace --exit-code 1
