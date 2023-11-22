@@ -27,7 +27,7 @@ pub enum ParserEvent<'a> {
 }
 
 #[macro_export]
-macro_rules! translator {
+macro_rules! converter {
     (
         $(#[$attr:meta])*
         $struct_name:ident,

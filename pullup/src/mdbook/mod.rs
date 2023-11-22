@@ -3,6 +3,8 @@
 use crate::ParserEvent;
 pub use pulldown_mdbook::{Event, Tag};
 
+pub mod to;
+
 /// Assert that an iterator only contains Mdbook events. Panics if another type of event
 /// is encountered.
 ///
