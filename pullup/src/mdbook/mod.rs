@@ -1,11 +1,11 @@
 //! Support for [mdBook](https://github.com/rust-lang/mdBook).
 
 use crate::ParserEvent;
-pub use pulldown_mdbook::{Event, Tag};
+pub use pulldown_mdbook::{ChapterSource, ChapterStatus, ContentType, Event, Parser, Tag};
 
 pub mod to;
 
-/// Assert that an iterator only contains Mdbook events. Panics if another type of event
+/// Assert that an iterator only contains mdBook events. Panics if another type of event
 /// is encountered.
 ///
 /// For a non-panic version, see [`MdbookFilter`].
@@ -28,10 +28,10 @@ where
     }
 }
 
-/// An iterator that only contains Mdbook events. Other types of events will be
-/// filtered out.
+/// An iterator that only contains mdBook events. Other types of events will be filtered
+/// out.
 ///
-/// To panic when a non-Mdbook event is encountered, see [`AssertMdbook`].
+/// To panic when a non-mdBook event is encountered, see [`AssertMdbook`].
 pub struct MdbookFilter<T>(pub T);
 impl<'a, T> Iterator for MdbookFilter<T>
 where
@@ -51,7 +51,7 @@ where
     }
 }
 
-/// An adaptor for events from an Mdbook parser.
+/// An adaptor for events from an mdBook parser.
 pub struct MdbookIter<T>(pub T);
 
 impl<'a, T> Iterator for MdbookIter<T>

@@ -6,11 +6,14 @@ use crate::typst;
 use crate::ParserEvent;
 
 #[cfg(feature = "builder")]
-pub mod builder;
+mod builder;
+
+#[cfg(feature = "builder")]
+pub use builder::Conversion;
 
 // TODO: tests
 converter!(
-    /// Convert mdbook authors to typst authors.
+    /// Convert mdBook authors to Typst authors.
     ConvertAuthors,
     ParserEvent<'a> => ParserEvent<'a>,
     |iter: &mut I| {
@@ -37,7 +40,7 @@ converter!(
 
 // TODO: tests
 converter!(
-    /// Convert mdbook title to typst set document title event.
+    /// Convert mdBook title to Typst set document title event.
     ConvertTitle,
     ParserEvent<'a> => ParserEvent<'a>,
     |iter: &mut I| {
@@ -55,7 +58,7 @@ converter!(
 
 // TODO: tests
 converter!(
-    /// Convert mdbook chapters to typst pagebreaks.
+    /// Convert mdBook chapters to Typst pagebreaks.
     ConvertChapter,
     ParserEvent<'a> => ParserEvent<'a>,
     |iter: &mut I| {
