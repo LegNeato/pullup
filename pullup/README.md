@@ -1,7 +1,8 @@
 # Pullup
 
-_Pullup_ converts between markup formats via [pulldown
-parsers](https://github.com/raphlinus/pulldown-cmark#why-a-pull-parser).
+**Pullup** converts between [*pull*down
+parser](https://github.com/raphlinus/pulldown-cmark#why-a-pull-parser) events for
+various mark*up* formats.
 
 Currently supported markup formats:
 
@@ -9,7 +10,7 @@ Currently supported markup formats:
 - [mdBook](https://github.com/rust-lang/mdBook) (via the `mdbook` feature)
 - [Typst](https://github.com/typst/typst) (via the `typst` feature)
 
-All formats are disabled by default and must be enabled via features before use.
+Formats are disabled by default and must be enabled via features before use.
 
 ## How to use the crate
 
@@ -18,6 +19,6 @@ All formats are disabled by default and must be enabled via features before use.
    Markdown). The parser creates an iterator of markup-specific `Event`s.
 2. Load the format-specific `Event`s into the multi-format `ParserEvent` provided by
    this crate.
-   - Iterator adaptors that do so are available in the `assert` module.
+   - Iterator adaptors to do so are available in the `assert` module.
 3. Operate on the `ParserEvent`s.
 4. Strip irrelevant `ParserEvents` and output to a different format.
