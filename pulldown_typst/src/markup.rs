@@ -1,7 +1,9 @@
 use crate::{Event, LinkType, ShowType, Tag};
 use std::{collections::VecDeque, fmt::Write, io::ErrorKind};
-/// Take an iterator of Typst events and output typst markup. Note that while each item
-/// returned by the iterator is a `String`, each item can contain multiple lines.
+/// Convert Typst events to Typst markup.
+///
+/// Note: while each item returned by the iterator is a `String`, items may contain
+/// multiple lines.
 // TODO: tests
 pub struct TypstMarkup<'a, T> {
     tag_queue: VecDeque<Tag<'a>>,

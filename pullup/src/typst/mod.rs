@@ -1,8 +1,12 @@
 //! Support for [Typist](https://typst.app/docs).
 
-pub use pulldown_typst::*;
+pub use pulldown_typst::{
+    Bookmarks, CodeBlockDisplay, Event, LinkType, NumberingPattern, ShowType, TableOfContents, Tag,
+};
 
 use crate::ParserEvent;
+
+pub mod to;
 
 /// Assert that an iterator only contains Typst events. Panics if another type of event
 /// is encountered.
