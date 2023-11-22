@@ -1,7 +1,10 @@
 //! Support for [Markdown](https://commonmark.org/).
 
 use crate::ParserEvent;
-pub use pulldown_cmark::{Event, Tag};
+pub use pulldown_cmark::*;
+
+pub mod strip;
+pub mod to;
 
 /// Assert that an iterator only contains Markdown events. Panics if another type of
 /// event is encountered.

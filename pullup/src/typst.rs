@@ -1,6 +1,6 @@
 //! Support for [Typist](https://typst.app/docs).
 
-pub use pulldown_typst::{Event, Tag};
+pub use pulldown_typst::*;
 
 use crate::ParserEvent;
 

@@ -1,5 +1,6 @@
 use std::num::NonZeroU8;
 pub mod markup;
+// TODO: remove this.
 use pulldown_cmark::CowStr;
 
 #[derive(Debug, PartialEq, Clone)]
