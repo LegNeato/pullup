@@ -82,6 +82,8 @@ enum ConfigState {
     Done,
 }
 
+/// Parse an mdBook configuration into events.
+#[derive(Debug)]
 pub struct ConfigParser<'a> {
     state: ConfigState,
     config: &'a Config,
@@ -301,7 +303,7 @@ where
     }
 }
 
-/// Parse an MdBook structure into events.
+/// Parse an mdBook structure into events.
 // TODO: tests
 #[derive(Debug, Clone)]
 pub struct MdBookParser<'a>(Vec<self::Event<'a>>);
