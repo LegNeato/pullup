@@ -5,6 +5,9 @@ use crate::mdbook;
 use crate::typst;
 use crate::ParserEvent;
 
+#[cfg(feature = "builder")]
+pub mod builder;
+
 // TODO: tests
 converter!(
     /// Convert mdbook authors to typst authors.
