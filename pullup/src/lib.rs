@@ -27,6 +27,7 @@ pub enum ParserEvent<'a> {
 }
 
 #[macro_export]
+/// Convert between markup events without a buffer or lookahead.
 macro_rules! converter {
     (
         $(#[$attr:meta])*
