@@ -1,4 +1,4 @@
-use std::{num::NonZeroU8};
+use std::num::NonZeroU8;
 pub mod markup;
 use pulldown_cmark::CowStr;
 
@@ -23,14 +23,16 @@ pub enum Event<'a> {
     /// A line.
     Line,
     /// A let binding. First argument is lhs, second is rhs.
-    /// https://typst.app/docs/reference/scripting/#bindings
+    ///
+    /// See <https://typst.app/docs/reference/scripting/#bindings>.
     Let(CowStr<'a>, CowStr<'a>),
     /// A function call. The first field is the target variable (without `#`), the
     /// second is the function name, and the third is a list of arguments.
     // TODO: make this strongly typed.
     FunctionCall(Option<CowStr<'a>>, CowStr<'a>, Vec<CowStr<'a>>),
     /// A set rule.
-    /// https://typst.app/docs/reference/styling/#set-rules
+    ///
+    /// See <https://typst.app/docs/reference/styling/#set-rules>.
     // TODO: make this a tag.
     Set(CowStr<'a>, CowStr<'a>, CowStr<'a>),
     /// Raw string data what will be bassed through directly to typst. Prefer using
@@ -44,7 +46,9 @@ pub enum Tag<'a> {
     /// A paragraph of text and other inline elements.
     Paragraph,
 
-    /// A show rule. https://typst.app/docs/reference/styling/#show-rules
+    /// A show rule.
+    ///
+    /// See <https://typst.app/docs/reference/styling/#show-rules>.
     Show(
         ShowType,
         CowStr<'a>,
@@ -68,7 +72,8 @@ pub enum Tag<'a> {
     /// indicates the starting number, the second is the [numbering
     /// pattern](https://typst.app/docs/reference/meta/numbering/), the third is if
     /// tight is desired. Contains only list items.
-    /// https://typst.app/docs/reference/layout/enum/
+    ///
+    /// See <https://typst.app/docs/reference/layout/enum/>.
     NumberedList(u64, Option<NumberingPattern<'a>>, bool),
     /// A list item.
     Item,
@@ -82,28 +87,34 @@ pub enum Tag<'a> {
     Link(LinkType, CowStr<'a>),
 }
 
+/// How to display a code block.
 #[derive(Clone, Debug, PartialEq)]
 pub enum CodeBlockDisplay {
     Inline,
     Block,
 }
 
+/// Item appearance in bookmarks.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Bookmarks {
     Include,
     Exclude,
 }
 
+/// Item appearance in the table of contents.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TableOfContents {
     Include,
     Exclude,
 }
 
+/// The pattern to use whren numbering items.
+///
+/// See <https://typst.app/docs/reference/meta/numbering/>.
 #[derive(Clone, Debug, PartialEq)]
 pub struct NumberingPattern<'a>(&'a str);
 
-/// Type specifier for Show rules. See [the Tag::Link](enum.Tag.html#variant.Link) for
+/// Type specifier for Show rules. See [Tag::Show](enum.Tag.html#variant.Show) for
 /// more information.
 // TODO: support different dests.
 #[derive(Clone, Debug, PartialEq, Copy)]
@@ -112,7 +123,7 @@ pub enum ShowType {
     Function,
 }
 
-/// Type specifier for inline links. See [the Tag::Link](enum.Tag.html#variant.Link) for
+/// Type specifier for inline links. See [Tag::Link](enum.Tag.html#variant.Link) for
 /// more information.
 #[derive(Clone, Debug, PartialEq, Copy)]
 pub enum LinkType {
