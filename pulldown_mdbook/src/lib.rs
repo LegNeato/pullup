@@ -51,6 +51,12 @@ pub enum Tag<'a> {
 
     /// A list of the mdbook authors. Only contains Author events.
     AuthorList,
+
+    /// Logical marker for the configuration of the book.
+    BookConfiguration,
+
+    /// Logical marker for the content of the book.
+    BookContent,
 }
 
 /// The status of a chapter.

@@ -244,10 +244,16 @@ impl<'a> Parser<'a> {
     /// library.
     pub fn from_mdbook(book: &'a MDBook) -> Self {
         let config = ConfigParser::new(&book.config);
-        let events = vec![self::Event::Root(book.root.to_owned().clone())]
-            .into_iter()
+        let events = iter::empty()
+            // Configuration
+            .chain(iter::once(self::Event::Start(self::Tag::BookConfiguration)))
+            .chain(iter::once(self::Event::Root(book.root.to_owned().clone())))
             .chain(config)
+            .chain(iter::once(self::Event::End(self::Tag::BookConfiguration)))
+            // Content
+            .chain(iter::once(self::Event::Start(self::Tag::BookContent)))
             .chain(events_from_items(&book.book.sections))
+            .chain(iter::once(self::Event::End(self::Tag::BookContent)))
             .collect();
         Self(events)
     }
@@ -256,10 +262,16 @@ impl<'a> Parser<'a> {
     /// a binary.
     pub fn from_rendercontext(ctx: &'a RenderContext) -> Self {
         let config = ConfigParser::new(&ctx.config);
-        let events = vec![self::Event::Root(ctx.root.clone())]
-            .into_iter()
+        let events = iter::empty()
+            // Configuration
+            .chain(iter::once(self::Event::Start(self::Tag::BookConfiguration)))
+            .chain(iter::once(self::Event::Root(ctx.root.clone())))
             .chain(config)
+            .chain(iter::once(self::Event::End(self::Tag::BookConfiguration)))
+            // Content
+            .chain(iter::once(self::Event::Start(self::Tag::BookContent)))
             .chain(events_from_items(&ctx.book.sections))
+            .chain(iter::once(self::Event::End(self::Tag::BookContent)))
             .collect();
 
         Self(events)
