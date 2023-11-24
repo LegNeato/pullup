@@ -144,7 +144,12 @@ where
                     Some(format!("#{f}({args})\n"))
                 }
             }
+            Some(Event::DocumentFunctionCall(args)) => {
+                let args = args.join(", ");
+                Some(format!("#document({args})\n"))
+            }
             Some(Event::Set(ele, k, v)) => Some(format!("#set {ele}({k}: {v})\n")),
+            Some(Event::DocumentSet(k, v)) => Some(format!("#set document({k}: {v})\n")),
         }
     }
 }

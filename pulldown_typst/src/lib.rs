@@ -29,13 +29,34 @@ pub enum Event<'a> {
     Let(CowStr<'a>, CowStr<'a>),
     /// A function call. The first field is the target variable (without `#`), the
     /// second is the function name, and the third is a list of arguments.
+    ///
+    /// If calling `document()`, prefer [`DocumentFunctionCall`].
     // TODO: make this strongly typed.
     FunctionCall(Option<CowStr<'a>>, CowStr<'a>, Vec<CowStr<'a>>),
+    /// A `document` function call. The field is the list of arguments.
+    ///
+    /// Prefer this over the more general `FunctionCall` as document calls must appear
+    /// before any content.
+    ///
+    /// See <https://typst.app/docs/reference/meta/document>.
+    // TODO: make this strongly typed.
+    DocumentFunctionCall(Vec<CowStr<'a>>),
     /// A set rule.
+    ///
+    /// If setting document metadata, prefer [`DocumentSet`].
     ///
     /// See <https://typst.app/docs/reference/styling/#set-rules>.
     // TODO: make this a tag.
     Set(CowStr<'a>, CowStr<'a>, CowStr<'a>),
+    /// A `document` set rule. The first field is the parameter name, the second is the
+    /// parameter value.
+    ///
+    /// Prefer this over the more general [`Set`] as document set rules must appear
+    /// before any content.
+    ///
+    /// See <https://typst.app/docs/reference/meta/document>.
+    DocumentSet(CowStr<'a>, CowStr<'a>),
+
     /// Raw string data what will be bassed through directly to typst. Prefer using
     /// other strongly-typed rules.
     Raw(CowStr<'a>),

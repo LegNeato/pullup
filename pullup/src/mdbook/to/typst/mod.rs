@@ -1,6 +1,7 @@
 //! Convert mdBook to Typst.
 
 use crate::converter;
+use crate::markdown::CowStr;
 use crate::mdbook;
 use crate::typst;
 use crate::ParserEvent;
@@ -11,32 +12,64 @@ mod builder;
 #[cfg(feature = "builder")]
 pub use builder::Conversion;
 
-// TODO: tests
-converter!(
-    /// Convert mdBook authors to Typst authors.
-    ConvertAuthors,
-    ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
-            Some(ParserEvent::Mdbook(mdbook::Event::Start(mdbook::Tag::AuthorList))) => {
-                // Set the authors variable to an empty array.
-                Some(ParserEvent::Typst(typst::Event::Let("mdbookauthors".into(), "()".into())))
-            },
-            Some(ParserEvent::Mdbook(mdbook::Event::Author(a))) => {
-                // Append author to the array.
-                Some(ParserEvent::Typst(typst::Event::FunctionCall(
-                    Some("mdbookauthors".into()),
-                    "push".into(),
-                    vec![format!("\"{}\"", a).into()],
-                )))
-            },
-            Some(ParserEvent::Mdbook(mdbook::Event::End(mdbook::Tag::AuthorList))) => {
-                // Set document authors to the array.
-                Some(ParserEvent::Typst(typst::Event::Set("document".into(), "author".into(), "mdbookauthors".into())))
-            },
-            x => x,
+/// Convert mdBook authors to Typst authors.
+#[derive(Debug)]
+pub struct ConvertAuthors<'a, T> {
+    authors: Vec<CowStr<'a>>,
+    iter: T,
+}
+
+impl<'a, T> ConvertAuthors<'a, T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    #[allow(dead_code)]
+    fn new(iter: T) -> Self {
+        Self {
+            authors: vec![],
+            iter,
+        }
     }
-});
+}
+
+impl<'a, T> Iterator for ConvertAuthors<'a, T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    type Item = ParserEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            Some(ParserEvent::Mdbook(mdbook::Event::Start(mdbook::Tag::AuthorList))) => {
+                self.authors = vec![];
+                self.next()
+            }
+            Some(ParserEvent::Mdbook(mdbook::Event::Author(a))) => {
+                self.authors.push(a);
+                self.next()
+            }
+            Some(ParserEvent::Mdbook(mdbook::Event::End(mdbook::Tag::AuthorList))) => {
+                if !self.authors.is_empty() {
+                    let markup_array = format!(
+                        "({})",
+                        // TODO: use intersperse once stable.
+                        self.authors
+                            .iter()
+                            .map(|x| format!("\"{}\"", x))
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    );
+                    return Some(ParserEvent::Typst(typst::Event::DocumentSet(
+                        "author".into(),
+                        markup_array.into(),
+                    )));
+                }
+                self.next()
+            }
+            x => x,
+        }
+    }
+}
 
 // TODO: tests
 converter!(
@@ -46,8 +79,7 @@ converter!(
     |iter: &mut I| {
         match iter.next() {
             Some(ParserEvent::Mdbook(mdbook::Event::Title(title))) => {
-                Some(ParserEvent::Typst(typst::Event::Set(
-                    "document".into(),
+                Some(ParserEvent::Typst(typst::Event::DocumentSet(
                     "title".into(),
                     format!("\"{}\"", title.as_ref()).into()),
                 ))
