@@ -6,10 +6,10 @@ converter!(
     /// Strip out Markdown HTML.
     StripHtml,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Html(_))) => {
-                iter.find(|x| !matches!(x, ParserEvent::Markdown(markdown::Event::Html(_))))
+                this.iter.find(|x| !matches!(x, ParserEvent::Markdown(markdown::Event::Html(_))))
             },
             x => x,
     }

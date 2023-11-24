@@ -65,7 +65,7 @@ macro_rules! converter {
 
             fn next(&mut self) -> Option<Self::Item> {
                 #[allow(clippy::redundant_closure_call)]
-                $body(&mut self.iter)
+                $body(self)
             }
         }
     };

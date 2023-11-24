@@ -10,8 +10,8 @@ converter!(
     /// Convert Markdown paragraphs to Typst paragraphs.
     ConvertParagraphs,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Paragraph))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Paragraph)))
             },
@@ -98,8 +98,8 @@ converter!(
     /// Convert Markdown links to Typst links.
     ConvertLinks,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Link(kind, url, _)))) => {
                 match kind {
                     markdown::LinkType::Inline => Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Content, url)))),
@@ -118,7 +118,7 @@ converter!(
                         let url = "mailto:".to_string() + url.as_ref();
                         Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Url, url.into()))))
                     },
-                    _ => iter.next()
+                    _ => this.iter.next()
                 }
             },
             Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Link(kind, url, _)))) => {
@@ -139,7 +139,7 @@ converter!(
                         let url = "mailto:".to_string() + url.as_ref();
                         Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Url, url.into()))))
                     },
-                    _ => iter.next()
+                    _ => this.iter.next()
                 }
             },
             x => x,
@@ -150,8 +150,8 @@ converter!(
     /// Convert Markdown **strong** tags to Typst strong tags.
     ConvertStrong,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Strong)))
             },
@@ -166,8 +166,8 @@ converter!(
     /// Convert Markdown _emphasis_ tags to Typst emphasis tags.
     ConvertEmphasis,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Emphasis)))
             },
@@ -182,8 +182,8 @@ converter!(
     /// Convert Markdown soft breaks to Typst line breaks.
     ConvertSoftBreaks,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::SoftBreak)) => {
                 Some(ParserEvent::Typst(typst::Event::Text(" ".into())))
             },
@@ -195,9 +195,9 @@ converter!(
     /// Convert Markdown hard breaks to Typst paragraph breaks.
     ConvertHardBreaks,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
+    |this: &mut Self| {
         // TODO: not sure that this mapping is correct.
-        match iter.next() {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::HardBreak)) => {
                 Some(ParserEvent::Typst(typst::Event::Parbreak))
             },
@@ -209,8 +209,8 @@ converter!(
     /// Convert Markdown code tags to Typst raw tags.
     ConvertCode,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             // Inline.
             Some(ParserEvent::Markdown(markdown::Event::Code(x))) => {
                 Some(ParserEvent::Typst(typst::Event::Code(x)))
@@ -250,11 +250,11 @@ converter!(
     /// Convert Markdown lists to Typst lists.
     ConvertLists,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
+    |this: &mut Self| {
         // TODO: Handle tight.
 
         // TODO: Allow changing the marker and number format.
-        match iter.next() {
+        match this.iter.next() {
             // List start.
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::List(number)))) => {
                 if let Some(start) = number {
@@ -294,7 +294,7 @@ converter!(
     /// Convert Markdown headings to Typst headings.
     ConvertHeadings,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
+    |this: &mut Self| {
         struct TypstLevel(std::num::NonZeroU8);
 
         impl std::ops::Deref for TypstLevel {
@@ -316,7 +316,7 @@ converter!(
                 }
             }
         }
-        match iter.next() {
+        match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Heading(level, _, _)))) => {
                 let level: TypstLevel = level.into();
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Heading(*level,

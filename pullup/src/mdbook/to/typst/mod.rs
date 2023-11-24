@@ -76,8 +76,8 @@ converter!(
     /// Convert mdBook title to Typst set document title event.
     ConvertTitle,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
+    |this: &mut Self| {
+        match this.iter.next() {
             Some(ParserEvent::Mdbook(mdbook::Event::Title(title))) => {
                 Some(ParserEvent::Typst(typst::Event::DocumentSet(
                     "title".into(),
@@ -93,9 +93,9 @@ converter!(
     /// Convert mdBook chapters to Typst pagebreaks.
     ConvertChapter,
     ParserEvent<'a> => ParserEvent<'a>,
-    |iter: &mut I| {
-        match iter.next() {
-            Some(ParserEvent::Mdbook(mdbook::Event::Start(mdbook::Tag::Chapter(_, _, _, _)))) => iter.next(),
+    |this: &mut Self| {
+        match this.iter.next() {
+            Some(ParserEvent::Mdbook(mdbook::Event::Start(mdbook::Tag::Chapter(_, _, _, _)))) => this.next(),
             Some(ParserEvent::Mdbook(mdbook::Event::End(mdbook::Tag::Chapter(_, _, _, _)))) => {
                 Some(ParserEvent::Typst(typst::Event::FunctionCall(
                     None,
