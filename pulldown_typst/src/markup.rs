@@ -115,6 +115,9 @@ where
                     _ => todo!(),
                 };
 
+                //println!("{:#?}", self.tag_queue);
+                //println!("------");
+
                 let in_tag = self.tag_queue.pop_back();
 
                 // Make sure we are in a good state.

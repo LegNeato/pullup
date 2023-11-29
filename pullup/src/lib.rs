@@ -14,7 +14,7 @@ pub mod typst;
 /// * Convert format-specific iterators to [`ParserEvent`] iterators for further
 ///   processing.
 /// * Convert [`ParserEvent`] iterators to format-specific iterators for output.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ParserEvent<'a> {
     #[cfg(feature = "markdown")]
     Markdown(markdown::Event<'a>),
@@ -64,6 +64,10 @@ macro_rules! converter {
             type Item = $out;
 
             fn next(&mut self) -> Option<Self::Item> {
+                #[cfg(feature = "tracing")]
+                let span = tracing::span!(tracing::Level::TRACE, &"next");
+                #[cfg(feature = "tracing")]
+                let _enter = span.enter();
                 #[allow(clippy::redundant_closure_call)]
                 $body(self)
             }

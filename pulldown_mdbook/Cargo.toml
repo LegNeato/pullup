@@ -1,14 +1,18 @@
 [package]
 name = "pulldown_mdbook"
-version = "0.2.0"
+version = "0.3.0"
 description = "A pull parser for mdBook"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 authors = ["Christian Legnitto <christian@legnitto.com>"]
 
+[features]
+tracing = ["dep:tracing"]
+
 [dependencies]
 mdbook = { version = "0.4.35", default-features = false }
 pulldown-cmark = "0.9.3"
+tracing = { version = "0.1.40", optional = true }
 
 [dev-dependencies]
 similar-asserts = "1.5.0"

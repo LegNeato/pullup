@@ -10,7 +10,7 @@ use crate::ParserEvent;
 #[derive(typed_builder::TypedBuilder)]
 #[builder(build_method(vis="", name=__build))]
 #[builder(field_defaults(default = true))]
-/// Convert mdBook to Typst.
+/// Converts Mdbook to Typst.
 ///
 /// Using the builder one can choose which conversions to apply. By default, all
 /// conversions are enabled.
@@ -18,7 +18,7 @@ use crate::ParserEvent;
 /// For more control over conversion, use the converters in [the parent
 /// module](crate::mdbook::to::typst) and [markdown module](crate::markdown::to::typst)
 /// directly. Additionally, one may turn off the conversion via the builder and operate
-/// on the resulting [`ParserEvent`](crate::ParserEvent) iterator.
+/// on the resulting [`ParseEvent`](crate::ParserEvent) iterator.
 pub struct Conversion<'a, T> {
     #[builder(!default)]
     events: T,
