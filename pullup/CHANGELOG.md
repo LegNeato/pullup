@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 15 commits contributed to the release over the course of 9 calendar days.
+ - 17 commits contributed to the release over the course of 9 calendar days.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Add changelogs. ([`e89557b`](https://github.com/LegNeato/pullup/commit/e89557be19304844054a26622c6b1e28987f0937))
+    - Adjusting changelogs prior to release of pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`230eb15`](https://github.com/LegNeato/pullup/commit/230eb15f4eaefdc262db59e7946c60ac7e209b76))
     - Fix Typst markup output with special characters in inline code. ([`177e538`](https://github.com/LegNeato/pullup/commit/177e5382581e2e6620df92e2aabe735f9b7b02d0))
     - Add tracing, change some converters. ([`8b2e292`](https://github.com/LegNeato/pullup/commit/8b2e2921fc3a5cf1a3d2ce7a46ddd3867f75479a))
     - Make converters take self. ([`64791a0`](https://github.com/LegNeato/pullup/commit/64791a0a011f57aba5fba6e4fcb8347e5a4423d8))
