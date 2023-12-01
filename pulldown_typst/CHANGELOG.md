@@ -5,17 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.3.1 (2023-12-01)
+## v0.3.2 (2023-12-01)
 
-### Bug Fixes
+### Chore
 
- - <csr-id-6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20/> try to fix cargo-smart-release.
+ - <csr-id-bd7fb0c0c7d5cbe413c5cf9b9c50422a5f2da407/> Add tests for emphasis.
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 14 commits contributed to the release over the course of 9 calendar days.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +26,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Add tests for emphasis. ([`bd7fb0c`](https://github.com/LegNeato/pullup/commit/bd7fb0c0c7d5cbe413c5cf9b9c50422a5f2da407))
+    - Switch from using typist markup to markup functions. ([`67f4f92`](https://github.com/LegNeato/pullup/commit/67f4f922e2402107bdd4540c6e3bb1ab818b2321))
+</details>
+
+## v0.3.1 (2023-12-01)
+
+### Bug Fixes
+
+ - <csr-id-6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20/> try to fix cargo-smart-release.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 15 commits contributed to the release over the course of 9 calendar days.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Release pulldown_mdbook v0.3.1, pulldown_typst v0.3.1, pullup v0.3.1 ([`e565ece`](https://github.com/LegNeato/pullup/commit/e565ece82bcc04226211f278f0bbbefe7754ff68))
     - Release pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`2c88246`](https://github.com/LegNeato/pullup/commit/2c88246b29b36560060646dcbccedeb791097c36))
     - Release pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`8e2d360`](https://github.com/LegNeato/pullup/commit/8e2d36063d64727a04101e29a1c7b7cd231f31f2))
     - Try to fix cargo-smart-release. ([`6f1e1b4`](https://github.com/LegNeato/pullup/commit/6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20))
