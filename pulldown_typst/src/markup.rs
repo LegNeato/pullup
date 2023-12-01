@@ -1,5 +1,17 @@
 use crate::{Event, LinkType, ShowType, Tag};
 use std::{collections::VecDeque, fmt::Write, io::ErrorKind};
+
+fn typst_escape(s: &str) -> String {
+    s.replace('$', "\\$")
+        .replace('#', "\\#")
+        .replace('<', "\\<")
+        .replace('>', "\\>")
+        .replace('*', "\\*")
+        .replace('_', " \\_")
+        .replace('`', "\\`")
+        .replace('@', "\\@")
+}
+
 /// Convert Typst events to Typst markup.
 ///
 /// Note: while each item returned by the iterator is a `String`, items may contain
@@ -81,7 +93,7 @@ where
                     Tag::Strong => Some("*".to_string()),
                     Tag::Link(ref ty, ref url) => match ty {
                         LinkType::Content => Some(format!("#link(\"{url}\")[")),
-                        LinkType::Url | LinkType::Autolink => Some(format!("#link(\"{url}\")")),
+                        LinkType::Url | LinkType::Autolink => Some(format!("#link(\"{url}\")[")),
                     },
                     _ => todo!(),
                 };
@@ -109,14 +121,11 @@ where
                     }
                     Tag::Link(ty, _) => match ty {
                         LinkType::Content => Some("]".to_string()),
-                        LinkType::Url | LinkType::Autolink => Some("".to_string()),
+                        LinkType::Url | LinkType::Autolink => Some("]".to_string()),
                     },
                     Tag::Show(_, _, _, _) => Some("\n".to_string()),
                     _ => todo!(),
                 };
-
-                //println!("{:#?}", self.tag_queue);
-                //println!("------");
 
                 let in_tag = self.tag_queue.pop_back();
 
@@ -125,15 +134,14 @@ where
                 ret
             }
             Some(Event::Raw(x)) => Some(x.into_string()),
-            Some(Event::Text(x)) => Some(x.into_string()),
-            Some(Event::Code(x)) => {
-                // Handle a case in markdown that is invalid in typst: "````"
-                if x.contains('`') {
-                    Some(format!("#raw(\"{}\")", x.replace('"', r#"\""#)))
+            Some(Event::Text(x)) => {
+                if self.codeblock_queue.is_empty() {
+                    Some(typst_escape(&x))
                 } else {
-                    Some(format!("`{x}`"))
+                    Some(x.into_string())
                 }
             }
+            Some(Event::Code(x)) => Some(format!("#raw(\"{}\")", x.replace('"', r#"\""#))),
             Some(Event::Linebreak) => Some("#linebreak()\n".to_string()),
             Some(Event::Parbreak) => Some("#parbreak()\n".to_string()),
             Some(Event::PageBreak) => Some("#pagebreak()\n".to_string()),
@@ -178,4 +186,45 @@ where
             .map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod escape {
+        use super::*;
+
+        #[test]
+        fn raw_encodes_code() {
+            let input = vec![Event::Code("*foo*".into())];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#raw(\"*foo*\")";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn doesnt_escape_codeblock() {
+            let input = vec![
+                Event::Start(Tag::CodeBlock(None, crate::CodeBlockDisplay::Block)),
+                Event::Text("*blah*".into()),
+                Event::End(Tag::CodeBlock(None, crate::CodeBlockDisplay::Block)),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "``````\n*blah*``````\n";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn escapes_link_content() {
+            let input = vec![
+                Event::Start(Tag::Link(LinkType::Content, "http://example.com".into())),
+                Event::Text("*blah*".into()),
+                Event::End(Tag::Link(LinkType::Content, "http://example.com".into())),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#link(\"http://example.com\")[\\*blah\\*]";
+            assert_eq!(&output, &expected);
+        }
+    }
 }

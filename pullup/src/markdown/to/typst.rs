@@ -58,15 +58,9 @@ where
                     // Strip out mdbook's non-standard MathJax.
                     // TODO: Translate to typst math and/or expose this as a typed
                     // markdown event.
-                    self.iter.next()
+                    self.next()
                 } else {
-                    Some(ParserEvent::Typst(typst::Event::Text(
-                        t.replace('$', "\\$")
-                            .replace('#', "\\#")
-                            .replace('<', "\\<")
-                            .replace('>', "\\>")
-                            .into(),
-                    )))
+                    Some(ParserEvent::Typst(typst::Event::Text(t.into())))
                 }
             }
             // Track code start.
