@@ -192,6 +192,48 @@ where
 mod tests {
     use super::*;
 
+    mod emphasis {
+        use super::*;
+
+        #[test]
+        fn inline() {
+            let input = vec![
+                Event::Start(Tag::Emphasis),
+                Event::Text("foo bar baz".into()),
+                Event::End(Tag::Emphasis),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#emph[foo bar baz]";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn containing_underscores() {
+            let input = vec![
+                Event::Start(Tag::Emphasis),
+                Event::Text("_whatever_".into()),
+                Event::End(Tag::Emphasis),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#emph[ \\_whatever \\_]";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn nested() {
+            let input = vec![
+                Event::Start(Tag::Emphasis),
+                Event::Start(Tag::Strong),
+                Event::Text("blah".into()),
+                Event::End(Tag::Strong),
+                Event::End(Tag::Emphasis),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#emph[#strong[blah]]";
+            assert_eq!(&output, &expected);
+        }
+    }
+
     mod escape {
         use super::*;
 
