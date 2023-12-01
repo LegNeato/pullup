@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Release pulldown_typst v0.3.2 ([`47f78c1`](https://github.com/LegNeato/pullup/commit/47f78c144c8e6b2f26d7456bf970d6538bccfb82))
+</details>
+
 ## v0.3.1 (2023-12-01)
 
 ### Bug Fixes
@@ -15,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 21 commits contributed to the release over the course of 9 calendar days.
+ - 22 commits contributed to the release over the course of 9 calendar days.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release pulldown_mdbook v0.3.1, pulldown_typst v0.3.1, pullup v0.3.1 ([`e565ece`](https://github.com/LegNeato/pullup/commit/e565ece82bcc04226211f278f0bbbefe7754ff68))
     - Release pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`2c88246`](https://github.com/LegNeato/pullup/commit/2c88246b29b36560060646dcbccedeb791097c36))
     - Release pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`8e2d360`](https://github.com/LegNeato/pullup/commit/8e2d36063d64727a04101e29a1c7b7cd231f31f2))
     - Try to fix cargo-smart-release. ([`6f1e1b4`](https://github.com/LegNeato/pullup/commit/6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20))
