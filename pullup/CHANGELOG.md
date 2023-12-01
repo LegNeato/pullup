@@ -5,14 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## v0.3.0 (2023-12-01)
+
+### Bug Fixes
+
+ - <csr-id-6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20/> try to fix cargo-smart-release.
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 18 commits contributed to the release over the course of 9 calendar days.
- - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 19 commits contributed to the release over the course of 9 calendar days.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -22,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Try to fix cargo-smart-release. ([`6f1e1b4`](https://github.com/LegNeato/pullup/commit/6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20))
     - Adjusting changelogs prior to release of pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`b0018bf`](https://github.com/LegNeato/pullup/commit/b0018bf5064900690b490ddf8c3647356bce40c7))
     - Add changelogs. ([`e89557b`](https://github.com/LegNeato/pullup/commit/e89557be19304844054a26622c6b1e28987f0937))
     - Adjusting changelogs prior to release of pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`230eb15`](https://github.com/LegNeato/pullup/commit/230eb15f4eaefdc262db59e7946c60ac7e209b76))
@@ -41,6 +46,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add README. ([`6038701`](https://github.com/LegNeato/pullup/commit/60387019aa240ba17542fe8d6eeea33294f217e0))
     - Bring in other crates. ([`1ab5157`](https://github.com/LegNeato/pullup/commit/1ab51574957a2a7c1643145f13c0e13322755861))
 </details>
-
-## v0.3.0 (2023-12-01)
 
