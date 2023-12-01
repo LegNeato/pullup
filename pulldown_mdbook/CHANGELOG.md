@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 10 commits contributed to the release over the course of 9 calendar days.
+ - 11 commits contributed to the release over the course of 9 calendar days.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`8e2d360`](https://github.com/LegNeato/pullup/commit/8e2d36063d64727a04101e29a1c7b7cd231f31f2))
     - Try to fix cargo-smart-release. ([`6f1e1b4`](https://github.com/LegNeato/pullup/commit/6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20))
     - Adjusting changelogs prior to release of pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`b0018bf`](https://github.com/LegNeato/pullup/commit/b0018bf5064900690b490ddf8c3647356bce40c7))
     - Add changelogs. ([`e89557b`](https://github.com/LegNeato/pullup/commit/e89557be19304844054a26622c6b1e28987f0937))
