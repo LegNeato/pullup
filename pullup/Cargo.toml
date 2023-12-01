@@ -3,7 +3,7 @@ name = "pullup"
 description = "Convert between markup formats"
 license = "MIT OR Apache-2.0"
 authors = ["Christian Legnitto <christian@legnitto.com>"]
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
