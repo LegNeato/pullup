@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.3.0 (2023-12-01)
+## v0.3.1 (2023-12-01)
 
 ### Bug Fixes
 
@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 13 commits contributed to the release over the course of 9 calendar days.
+ - 14 commits contributed to the release over the course of 9 calendar days.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`2c88246`](https://github.com/LegNeato/pullup/commit/2c88246b29b36560060646dcbccedeb791097c36))
     - Release pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`8e2d360`](https://github.com/LegNeato/pullup/commit/8e2d36063d64727a04101e29a1c7b7cd231f31f2))
     - Try to fix cargo-smart-release. ([`6f1e1b4`](https://github.com/LegNeato/pullup/commit/6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20))
     - Adjusting changelogs prior to release of pulldown_mdbook v0.3.0, pulldown_typst v0.3.0, pullup v0.3.0 ([`b0018bf`](https://github.com/LegNeato/pullup/commit/b0018bf5064900690b490ddf8c3647356bce40c7))
@@ -40,4 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Move typst markup generation to its own module. ([`7fbcc64`](https://github.com/LegNeato/pullup/commit/7fbcc6425bbb2e417b8335d8ea133ac7a92c2394))
     - Bring in other crates. ([`1ab5157`](https://github.com/LegNeato/pullup/commit/1ab51574957a2a7c1643145f13c0e13322755861))
 </details>
+
+## v0.3.0 (2023-12-01)
+
+### Bug Fixes
+
+ - <csr-id-6f1e1b495e53fdf1936ccf25f6f3e26ae26e3d20/> try to fix cargo-smart-release.
 
