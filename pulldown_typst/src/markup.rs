@@ -89,8 +89,8 @@ where
                             _ => unreachable!(),
                         }
                     }
-                    Tag::Emphasis => Some("_".to_string()),
-                    Tag::Strong => Some("*".to_string()),
+                    Tag::Emphasis => Some("#emph[".to_string()),
+                    Tag::Strong => Some("#strong[".to_string()),
                     Tag::Link(ref ty, ref url) => match ty {
                         LinkType::Content => Some(format!("#link(\"{url}\")[")),
                         LinkType::Url | LinkType::Autolink => Some(format!("#link(\"{url}\")[")),
@@ -110,8 +110,8 @@ where
                     Tag::Paragraph => Some("]\n".to_string()),
                     Tag::Heading(_, _, _) => Some("\n".to_string()),
                     Tag::Item => Some("\n".to_string()),
-                    Tag::Emphasis => Some("_".to_string()),
-                    Tag::Strong => Some("*".to_string()),
+                    Tag::Emphasis => Some("]".to_string()),
+                    Tag::Strong => Some("]".to_string()),
                     Tag::BulletList(_, _) => Some("".to_string()),
                     Tag::NumberedList(_, _, _) => Some("".to_string()),
                     Tag::CodeBlock(_, _) => {
