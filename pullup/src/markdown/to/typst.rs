@@ -60,7 +60,7 @@ where
                     // markdown event.
                     self.next()
                 } else {
-                    Some(ParserEvent::Typst(typst::Event::Text(t.into())))
+                    Some(ParserEvent::Typst(typst::Event::Text(t)))
                 }
             }
             // Track code start.
