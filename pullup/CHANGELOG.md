@@ -5,15 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.3.3 (2024-03-03)
+
+### Chore
+
+ - <csr-id-c3f552838a6772e127181b969fdac30b3cb4956d/> prepare for release
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 92 days passed between releases.
- - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -23,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Prepare for release ([`c3f5528`](https://github.com/LegNeato/pullup/commit/c3f552838a6772e127181b969fdac30b3cb4956d))
     - More clippy ([`8299b31`](https://github.com/LegNeato/pullup/commit/8299b3118258ed502a965be8209b1fe52d5c1ba0))
     - Fix https://github.com/LegNeato/mdbook-typst/issues/3 ([`338d530`](https://github.com/LegNeato/pullup/commit/338d5306452e336a4d74c288ed0e02017f9793b1))
 </details>
