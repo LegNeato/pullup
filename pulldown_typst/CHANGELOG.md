@@ -5,7 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 92 days passed between releases.
+ - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Fix clippy ([`eb4551f`](https://github.com/LegNeato/pullup/commit/eb4551ff4f41e24919904937f1a8095a2e952c6b))
+    - Fix https://github.com/LegNeato/mdbook-typst/issues/3 ([`338d530`](https://github.com/LegNeato/pullup/commit/338d5306452e336a4d74c288ed0e02017f9793b1))
+</details>
+
 ## v0.3.2 (2023-12-01)
+
+<csr-id-bd7fb0c0c7d5cbe413c5cf9b9c50422a5f2da407/>
 
 ### Chore
 
@@ -15,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release pulldown_typst v0.3.2 ([`47f78c1`](https://github.com/LegNeato/pullup/commit/47f78c144c8e6b2f26d7456bf970d6538bccfb82))
     - Add tests for emphasis. ([`bd7fb0c`](https://github.com/LegNeato/pullup/commit/bd7fb0c0c7d5cbe413c5cf9b9c50422a5f2da407))
     - Switch from using typist markup to markup functions. ([`67f4f92`](https://github.com/LegNeato/pullup/commit/67f4f922e2402107bdd4540c6e3bb1ab818b2321))
 </details>
