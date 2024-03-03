@@ -146,7 +146,7 @@ where
                 x
                     // "Raw" still needs forward slashes escaped or they will break out of
                     // the tag.
-                    .replace(r#"\"#, r#"\\"#)
+                    .replace('\\', r#"\\"#)
                     // "Raw" still needs quotes escaped or they will prematurely end the tag.
                     .replace('"', r#"\""#)
             )),
