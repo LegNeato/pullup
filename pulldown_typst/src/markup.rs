@@ -141,7 +141,15 @@ where
                     Some(x.into_string())
                 }
             }
-            Some(Event::Code(x)) => Some(format!("#raw(\"{}\")", x.replace('"', r#"\""#))),
+            Some(Event::Code(x)) => Some(format!(
+                "#raw(\"{}\")",
+                x
+                    // "Raw" still needs forward slashes escaped or they will break out of
+                    // the tag.
+                    .replace(r#"\"#, r#"\\"#)
+                    // "Raw" still needs quotes escaped or they will prematurely end the tag.
+                    .replace('"', r#"\""#)
+            )),
             Some(Event::Linebreak) => Some("#linebreak()\n".to_string()),
             Some(Event::Parbreak) => Some("#parbreak()\n".to_string()),
             Some(Event::PageBreak) => Some("#pagebreak()\n".to_string()),
@@ -242,6 +250,26 @@ mod tests {
             let input = vec![Event::Code("*foo*".into())];
             let output = TypstMarkup::new(input.into_iter()).collect::<String>();
             let expected = "#raw(\"*foo*\")";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        // https://github.com/LegNeato/mdbook-typst/issues/3
+        fn raw_escapes_forward_slash() {
+            let input = vec![Event::Code(r#"\"#.into())];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = r####"#raw("\\")"####;
+            assert_eq!(&output, &expected);
+
+            let input = vec![
+                Event::Start(Tag::Paragraph),
+                Event::Text("before ".into()),
+                Event::Code(r#"\"#.into()),
+                Event::Text(" after".into()),
+                Event::End(Tag::Paragraph),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = r####"#par()[before #raw("\\") after]"####.to_string() + "\n";
             assert_eq!(&output, &expected);
         }
 

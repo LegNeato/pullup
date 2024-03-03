@@ -697,7 +697,8 @@ baz
     }
 
     /// Markdown docs:
-    /// * https://spec.commonmark.org/0.30/#text Typst docs:
+    /// * https://spec.commonmark.org/0.30/#text
+    /// Typst docs:
     /// * https://typst.app/docs/reference/text/
     mod breaks {
         use super::*;
@@ -886,6 +887,33 @@ baz
                     Typst(TypstEvent::End(TypstTag::Item)),
                     Typst(TypstEvent::End(TypstTag::BulletList(None, false))),
                 ]
+            );
+        }
+    }
+
+    /// Markdown docs:
+    /// * https://spec.commonmark.org/0.30/#lists Typst docs:
+    /// * https://typst.app/docs/reference/layout/list
+    /// * https://typst.app/docs/reference/layout/enum/
+    mod issues {
+        use super::*;
+
+        // https://github.com/LegNeato/mdbook-typst/issues/3
+        #[test]
+        fn backslashes_in_backticks() {
+            let md = r###"before `\` after"###;
+
+            let i = ConvertText::new(MarkdownIter(Parser::new(&md)));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Markdown(MdEvent::Start(MdTag::Paragraph)),
+                    Typst(TypstEvent::Text("before ".into())),
+                    Markdown(MdEvent::Code(r#"\"#.into())),
+                    Typst(TypstEvent::Text(" after".into())),
+                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                ],
             );
         }
     }
