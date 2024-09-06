@@ -1,7 +1,8 @@
 //! Support for [Typist](https://typst.app/docs).
 
 pub use pulldown_typst::{
-    Bookmarks, CodeBlockDisplay, Event, LinkType, NumberingPattern, ShowType, TableOfContents, Tag,
+    Bookmarks, CodeBlockDisplay, Event, LinkType, NumberingPattern, QuoteQuotes, QuoteType,
+    ShowType, TableOfContents, Tag,
 };
 
 use crate::ParserEvent;

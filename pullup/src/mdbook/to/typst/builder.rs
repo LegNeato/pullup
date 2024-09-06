@@ -33,6 +33,7 @@ pub struct Conversion<'a, T> {
     text: bool,
     strong: bool,
     emphasis: bool,
+    blockquotes: bool,
     lists: bool,
     code: bool,
     links: bool,
@@ -56,6 +57,7 @@ impl<
         __text: ::typed_builder::Optional<bool>,
         __strong: ::typed_builder::Optional<bool>,
         __emphasis: ::typed_builder::Optional<bool>,
+        __blockquotes: ::typed_builder::Optional<bool>,
         __lists: ::typed_builder::Optional<bool>,
         __code: ::typed_builder::Optional<bool>,
         __links: ::typed_builder::Optional<bool>,
@@ -77,6 +79,7 @@ impl<
             __text,
             __strong,
             __emphasis,
+            __blockquotes,
             __lists,
             __code,
             __links,
@@ -126,6 +129,9 @@ where
             }
             if this.emphasis {
                 events = Box::new(ConvertEmphasis::new(events));
+            }
+            if this.blockquotes {
+                events = Box::new(ConvertBlockQuotes::new(events));
             }
             if this.lists {
                 events = Box::new(ConvertLists::new(events));

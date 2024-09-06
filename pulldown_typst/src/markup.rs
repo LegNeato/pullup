@@ -1,4 +1,4 @@
-use crate::{Event, LinkType, ShowType, Tag};
+use crate::{Event, LinkType, QuoteQuotes, QuoteType, ShowType, Tag};
 use std::{collections::VecDeque, fmt::Write, io::ErrorKind};
 
 fn typst_escape(s: &str) -> String {
@@ -95,6 +95,24 @@ where
                         LinkType::Content => Some(format!("#link(\"{url}\")[")),
                         LinkType::Url | LinkType::Autolink => Some(format!("#link(\"{url}\")[")),
                     },
+                    Tag::Quote(ref ty, ref quotes, ref attribution) => {
+                        let block = match ty {
+                            &QuoteType::Block => "block: true,",
+                            &QuoteType::Inline => "block: false,",
+                        };
+                        let quotes = match quotes {
+                            &QuoteQuotes::DoNotWrapInDoubleQuotes => "quotes: false,",
+                            &QuoteQuotes::WrapInDoubleQuotes => "quotes: true,",
+                            &QuoteQuotes::Auto => "quotes: auto,",
+                        };
+                        match attribution {
+                            Some(attribution) => Some(format!(
+                                "#quote({} {} attribution: [{}])[",
+                                block, quotes, attribution
+                            )),
+                            None => Some(format!("#quote({} {})[", block, quotes)),
+                        }
+                    }
                     _ => todo!(),
                 };
 
@@ -124,6 +142,7 @@ where
                         LinkType::Url | LinkType::Autolink => Some("]".to_string()),
                     },
                     Tag::Show(_, _, _, _) => Some("\n".to_string()),
+                    Tag::Quote(_, _, _) => Some("]".to_string()),
                     _ => todo!(),
                 };
 
@@ -294,6 +313,43 @@ mod tests {
             ];
             let output = TypstMarkup::new(input.into_iter()).collect::<String>();
             let expected = "#link(\"http://example.com\")[\\*blah\\*]";
+            assert_eq!(&output, &expected);
+        }
+    }
+
+    mod quote {
+        use super::*;
+
+        #[test]
+        fn single() {
+            let input = vec![
+                Event::Start(Tag::Quote(QuoteType::Block, QuoteQuotes::Auto, None)),
+                Event::Text("to be or not to be".into()),
+                Event::End(Tag::Quote(QuoteType::Block, QuoteQuotes::Auto, None)),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#quote(block: true, quotes: auto,)[to be or not to be]";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn attribution() {
+            let input = vec![
+                Event::Start(Tag::Quote(
+                    QuoteType::Block,
+                    QuoteQuotes::Auto,
+                    Some("some dude".into()),
+                )),
+                Event::Text("to be or not to be".into()),
+                Event::End(Tag::Quote(
+                    QuoteType::Block,
+                    QuoteQuotes::Auto,
+                    Some("some dude".into()),
+                )),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected =
+                "#quote(block: true, quotes: auto, attribution: [some dude])[to be or not to be]";
             assert_eq!(&output, &expected);
         }
     }

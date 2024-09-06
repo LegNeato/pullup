@@ -99,7 +99,11 @@ pub enum Tag<'a> {
     NumberedList(u64, Option<NumberingPattern<'a>>, bool),
     /// A list item.
     Item,
-
+    /// A quote.
+    /// The second argument is the attribution value if it exists.
+    ///
+    /// See <https://typst.app/docs/reference/model/quote/>.
+    Quote(QuoteType, QuoteQuotes, Option<CowStr<'a>>),
     // Span-level tags
     Emphasis,
     Strong,
@@ -112,8 +116,8 @@ pub enum Tag<'a> {
 /// How to display a code block.
 #[derive(Clone, Debug, PartialEq)]
 pub enum CodeBlockDisplay {
-    Inline,
     Block,
+    Inline,
 }
 
 /// Item appearance in bookmarks.
@@ -155,4 +159,20 @@ pub enum LinkType {
     Content,
     /// Autolink like `http://foo.bar/baz`.
     Autolink,
+}
+
+/// Type specifier for a quote.
+#[derive(Clone, Debug, PartialEq, Copy)]
+pub enum QuoteType {
+    Block,
+    Inline,
+}
+
+/// Include a quote in quotes.
+/// See <https://typst.app/docs/reference/model/quote/#parameters-quotes>
+#[derive(Clone, Debug, PartialEq, Copy)]
+pub enum QuoteQuotes {
+    WrapInDoubleQuotes,
+    DoNotWrapInDoubleQuotes,
+    Auto,
 }

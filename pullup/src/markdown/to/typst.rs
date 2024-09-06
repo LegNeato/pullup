@@ -200,6 +200,22 @@ converter!(
 });
 
 converter!(
+    /// Convert Markdown blockquotes to Typst quotes.
+    ConvertBlockQuotes,
+    ParserEvent<'a> => ParserEvent<'a>,
+    |this: &mut Self| {
+        match this.iter.next() {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::BlockQuote))) => {
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Quote(typst::QuoteType::Block, typst::QuoteQuotes::Auto, None))))
+            },
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::BlockQuote))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Quote(typst::QuoteType::Block, typst::QuoteQuotes::Auto, None))))
+            },
+            x => x,
+    }
+});
+
+converter!(
     /// Convert Markdown code tags to Typst raw tags.
     ConvertCode,
     ParserEvent<'a> => ParserEvent<'a>,
@@ -891,10 +907,6 @@ baz
         }
     }
 
-    /// Markdown docs:
-    /// * https://spec.commonmark.org/0.30/#lists Typst docs:
-    /// * https://typst.app/docs/reference/layout/list
-    /// * https://typst.app/docs/reference/layout/enum/
     mod issues {
         use super::*;
 
@@ -913,6 +925,64 @@ baz
                     Markdown(MdEvent::Code(r#"\"#.into())),
                     Typst(TypstEvent::Text(" after".into())),
                     Markdown(MdEvent::End(MdTag::Paragraph)),
+                ],
+            );
+        }
+
+        // https://github.com/LegNeato/mdbook-typst/issues/9
+        #[test]
+        fn simple_blockquote() {
+            let md = "> test";
+
+            let i = ConvertBlockQuotes::new(MarkdownIter(Parser::new(&md)));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Typst(TypstEvent::Start(TypstTag::Quote(
+                        typst::QuoteType::Block,
+                        typst::QuoteQuotes::Auto,
+                        None,
+                    ))),
+                    Markdown(MdEvent::Start(MdTag::Paragraph)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("test"))),
+                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Typst(TypstEvent::End(TypstTag::Quote(
+                        typst::QuoteType::Block,
+                        typst::QuoteQuotes::Auto,
+                        None,
+                    ))),
+                ],
+            );
+        }
+
+        // https://github.com/LegNeato/mdbook-typst/issues/9
+        #[test]
+        fn complex_blockquote() {
+            let md = "> one\n> two\n> three";
+
+            let i = ConvertBlockQuotes::new(MarkdownIter(Parser::new(&md)));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Typst(TypstEvent::Start(TypstTag::Quote(
+                        typst::QuoteType::Block,
+                        typst::QuoteQuotes::Auto,
+                        None,
+                    ))),
+                    Markdown(MdEvent::Start(MdTag::Paragraph)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("one"))),
+                    Markdown(MdEvent::SoftBreak),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("two"))),
+                    Markdown(MdEvent::SoftBreak),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("three"))),
+                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Typst(TypstEvent::End(TypstTag::Quote(
+                        typst::QuoteType::Block,
+                        typst::QuoteQuotes::Auto,
+                        None,
+                    ))),
                 ],
             );
         }
