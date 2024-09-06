@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Chore
+
+ - <csr-id-f4001034418cac9c8ce51091c45b356e644f3ce1/> changelog for smart-release
+
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 187 days passed between releases.
- - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -23,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Changelog for smart-release ([`f400103`](https://github.com/LegNeato/pullup/commit/f4001034418cac9c8ce51091c45b356e644f3ce1))
     - Add support for translating blockquotes. ([`373040f`](https://github.com/LegNeato/pullup/commit/373040f1d16e98025d06984de5ab771f6a15d8be))
 </details>
 
