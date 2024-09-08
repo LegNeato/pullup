@@ -37,6 +37,7 @@ pub struct Conversion<'a, T> {
     lists: bool,
     code: bool,
     links: bool,
+    tables: bool,
     #[builder(default)]
     _p: PhantomData<&'a ()>,
 }
@@ -61,6 +62,7 @@ impl<
         __lists: ::typed_builder::Optional<bool>,
         __code: ::typed_builder::Optional<bool>,
         __links: ::typed_builder::Optional<bool>,
+        __tables: ::typed_builder::Optional<bool>,
         ___p: ::typed_builder::Optional<PhantomData<&'a ()>>,
     >
     ConversionBuilder<
@@ -83,6 +85,7 @@ impl<
             __lists,
             __code,
             __links,
+            __tables,
             ___p,
         ),
     >
@@ -141,6 +144,9 @@ where
             }
             if this.links {
                 events = Box::new(ConvertLinks::new(events));
+            }
+            if this.tables {
+                events = Box::new(ConvertTables::new(events));
             }
         }
 
