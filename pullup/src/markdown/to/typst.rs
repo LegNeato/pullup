@@ -346,6 +346,63 @@ converter!(
    }
 );
 
+converter!(
+    /// Convert Markdown tables to Typst tables.
+    ConvertTables,
+    ParserEvent<'a> => ParserEvent<'a>,
+    |this: &mut Self| {
+        match this.iter.next() {
+            // Handle starting a table
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Table(alignment)))) => {
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Table(
+                    alignment.iter().map(|&a| match a {
+                        markdown::Alignment::Left => typst::TableCellAlignment::Left,
+                        markdown::Alignment::Center => typst::TableCellAlignment::Center,
+                        markdown::Alignment::Right => typst::TableCellAlignment::Right,
+                        markdown::Alignment::None => typst::TableCellAlignment::None,
+                    }).collect(),
+                ))))
+            },
+            // Handle ending a table
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Table(alignment)))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Table(
+                    alignment.iter().map(|&a| match a {
+                        markdown::Alignment::Left => typst::TableCellAlignment::Left,
+                        markdown::Alignment::Center => typst::TableCellAlignment::Center,
+                        markdown::Alignment::Right => typst::TableCellAlignment::Right,
+                        markdown::Alignment::None => typst::TableCellAlignment::None,
+                    }).collect(),
+                ))))
+            },
+            // Handle header row
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::TableHead))) => {
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::TableHead)))
+            },
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::TableHead))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::TableHead)))
+            },
+            // Handle starting a row
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::TableRow))) => {
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::TableRow)))
+            },
+            // Handle ending a row
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::TableRow))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::TableRow)))
+            },
+            // Handle starting a cell
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::TableCell))) => {
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::TableCell)))
+            },
+            // Handle ending a cell
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::TableCell))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::TableCell)))
+            },
+            // Pass through any other events
+            x => x,
+        }
+    }
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -984,6 +1041,96 @@ baz
                         None,
                     ))),
                 ],
+            );
+        }
+    }
+
+    mod tables {
+        use super::*;
+
+        #[test]
+        fn simple_table() {
+            let md = "\
+| Header1 | Header2 |
+|---------|---------|
+| Cell1   | Cell2   |
+";
+            let i = ConvertTables::new(MarkdownIter(Parser::new_ext(
+                &md,
+                pulldown_cmark::Options::ENABLE_TABLES,
+            )));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Typst(TypstEvent::Start(TypstTag::Table(vec![
+                        typst::TableCellAlignment::None,
+                        typst::TableCellAlignment::None,
+                    ]))),
+                    Typst(TypstEvent::Start(TypstTag::TableHead)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Header1"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Header2"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::End(TypstTag::TableHead)),
+                    Typst(TypstEvent::Start(TypstTag::TableRow)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Cell1"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Cell2"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::End(TypstTag::TableRow)),
+                    Typst(TypstEvent::End(TypstTag::Table(vec![
+                        typst::TableCellAlignment::None,
+                        typst::TableCellAlignment::None,
+                    ]))),
+                ]
+            );
+        }
+
+        #[test]
+        fn table_with_alignment() {
+            let md = "\
+| Header1 | Header2 |
+|:--------|:-------:|
+| Cell1   | Cell2   |
+";
+            let i = ConvertTables::new(MarkdownIter(Parser::new_ext(
+                &md,
+                pulldown_cmark::Options::ENABLE_TABLES,
+            )));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Typst(TypstEvent::Start(TypstTag::Table(vec![
+                        typst::TableCellAlignment::Left,
+                        typst::TableCellAlignment::Center,
+                    ]))),
+                    Typst(TypstEvent::Start(TypstTag::TableHead)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Header1"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Header2"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::End(TypstTag::TableHead)),
+                    Typst(TypstEvent::Start(TypstTag::TableRow)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Cell1"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::Start(TypstTag::TableCell)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Cell2"))),
+                    Typst(TypstEvent::End(TypstTag::TableCell)),
+                    Typst(TypstEvent::End(TypstTag::TableRow)),
+                    Typst(TypstEvent::End(TypstTag::Table(vec![
+                        typst::TableCellAlignment::Left,
+                        typst::TableCellAlignment::Center,
+                    ]))),
+                ]
             );
         }
     }
