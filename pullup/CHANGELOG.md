@@ -5,7 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.5 (2024-09-08)
+
+### Chore
+
+ - <csr-id-b04ce9fc301a9a94d5e3c51e098d6049913997c7/> update version
+
+### Other
+
+ - <csr-id-27e25364a5c1f15ce386e559cf3d9cea9fed4aa1/> Add support for markdown tables.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release over the course of 1 calendar day.
+ - 188 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#1](https://github.com/LegNeato/pullup/issues/1)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#1](https://github.com/LegNeato/pullup/issues/1)**
+    - Add support for translating blockquotes. ([`da906a5`](https://github.com/LegNeato/pullup/commit/da906a5c9669b50e4e27f6949f063c579ceccc0e))
+ * **Uncategorized**
+    - Update version ([`b04ce9f`](https://github.com/LegNeato/pullup/commit/b04ce9fc301a9a94d5e3c51e098d6049913997c7))
+    - Add support for markdown tables. ([`27e2536`](https://github.com/LegNeato/pullup/commit/27e25364a5c1f15ce386e559cf3d9cea9fed4aa1))
+</details>
+
 ## 0.3.3 (2024-03-03)
+
+<csr-id-c3f552838a6772e127181b969fdac30b3cb4956d/>
 
 ### Chore
 
@@ -15,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 92 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -27,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release pulldown_typst v0.3.3, pullup v0.3.3 ([`be1290a`](https://github.com/LegNeato/pullup/commit/be1290a5965bee0792937d0d03fb341250863109))
     - Prepare for release ([`c3f5528`](https://github.com/LegNeato/pullup/commit/c3f552838a6772e127181b969fdac30b3cb4956d))
     - More clippy ([`8299b31`](https://github.com/LegNeato/pullup/commit/8299b3118258ed502a965be8209b1fe52d5c1ba0))
     - Fix https://github.com/LegNeato/mdbook-typst/issues/3 ([`338d530`](https://github.com/LegNeato/pullup/commit/338d5306452e336a4d74c288ed0e02017f9793b1))
