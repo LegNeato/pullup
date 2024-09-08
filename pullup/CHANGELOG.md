@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.7 (2024-09-08)
+
+### Bug Fixes
+
+ - <csr-id-b260901620ab890463a47adee4db90977466bb83/> Add tables to builder.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add tables to builder. ([`b260901`](https://github.com/LegNeato/pullup/commit/b260901620ab890463a47adee4db90977466bb83))
+</details>
+
 ## 0.3.6 (2024-09-08)
+
+<csr-id-7c4201882d4c31addae88ca016f68b2800c3231f/>
+<csr-id-eb7246dc692d7010e8a4eef897500d0daf77581e/>
 
 ### Chore
 
@@ -19,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 1 calendar day.
+ - 6 commits contributed to the release over the course of 1 calendar day.
  - 188 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#1](https://github.com/LegNeato/pullup/issues/1), [#2](https://github.com/LegNeato/pullup/issues/2)
@@ -35,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#2](https://github.com/LegNeato/pullup/issues/2)**
     - Add support for markdown tables. ([`eb7246d`](https://github.com/LegNeato/pullup/commit/eb7246dc692d7010e8a4eef897500d0daf77581e))
  * **Uncategorized**
+    - Release pullup v0.3.6 ([`f560fe2`](https://github.com/LegNeato/pullup/commit/f560fe2813d706690614375abc84b4c806d91bc1))
     - Release pulldown_typst v0.3.6 ([`73e09c5`](https://github.com/LegNeato/pullup/commit/73e09c57e5a3fea330e3e5520b6a211edc2d24e7))
     - Release pulldown_mdbook v0.3.2, pulldown_typst v0.3.5, pullup v0.3.5 ([`cf09463`](https://github.com/LegNeato/pullup/commit/cf09463f47a9a5b498584850c6c094e6904a209a))
     - Update version ([`7c42018`](https://github.com/LegNeato/pullup/commit/7c4201882d4c31addae88ca016f68b2800c3231f))
