@@ -2,7 +2,7 @@
 
 pub use pulldown_typst::{
     Bookmarks, CodeBlockDisplay, Event, LinkType, NumberingPattern, QuoteQuotes, QuoteType,
-    ShowType, TableOfContents, Tag,
+    ShowType, TableCellAlignment, TableOfContents, Tag,
 };
 
 use crate::ParserEvent;

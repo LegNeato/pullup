@@ -111,7 +111,10 @@ where
 
                 // Chapter content events.
                 if !ch.content.is_empty() {
-                    let p = TextMergeStream::new(pulldown_cmark::Parser::new(&ch.content));
+                    let p = TextMergeStream::new(pulldown_cmark::Parser::new_ext(
+                        &ch.content,
+                        pulldown_cmark::Options::ENABLE_TABLES,
+                    ));
                     let p = p.map(Event::MarkdownContentEvent);
                     acc.1.extend(p);
                     acc.1.push(Event::End(Tag::Content(ContentType::Markdown)));

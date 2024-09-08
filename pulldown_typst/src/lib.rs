@@ -111,6 +111,15 @@ pub enum Tag<'a> {
 
     /// A link. The first field is the type and the second is the destination URL.
     Link(LinkType, CowStr<'a>),
+
+    /// A table. The first field is the alignment of each column.
+    Table(Vec<TableCellAlignment>),
+    /// A table header row. Must come after a #[Tag::Table].
+    TableHead,
+    /// A table row. Must come after a #[Tag::Table].
+    TableRow,
+    /// A table row. Must come after a #[Tag::TableRow].
+    TableCell,
 }
 
 /// How to display a code block.
@@ -175,4 +184,13 @@ pub enum QuoteQuotes {
     WrapInDoubleQuotes,
     DoNotWrapInDoubleQuotes,
     Auto,
+}
+
+/// Alignment of a table cell.
+#[derive(Clone, Debug, PartialEq, Copy)]
+pub enum TableCellAlignment {
+    Left,
+    Center,
+    Right,
+    None,
 }
