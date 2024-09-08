@@ -1,4 +1,4 @@
-use crate::{Event, LinkType, QuoteQuotes, QuoteType, ShowType, Tag};
+use crate::{Event, LinkType, QuoteQuotes, QuoteType, ShowType, Tag, TableCellAlignment};
 use std::{collections::VecDeque, fmt::Write, io::ErrorKind};
 
 fn typst_escape(s: &str) -> String {
@@ -113,6 +113,22 @@ where
                             None => Some(format!("#quote({} {})[", block, quotes)),
                         }
                     }
+                    Tag::Table(ref alignment) => {
+                        let alignments = alignment
+                            .iter()
+                            .map(|a| match a {
+                                TableCellAlignment::Left => "left",
+                                TableCellAlignment::Center => "center",
+                                TableCellAlignment::Right => "right",
+                                TableCellAlignment::None => "none",
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        Some(format!("#table(align: [{}])[\n", alignments))
+                    }
+                    Tag::TableRow => Some("#row[\n".to_string()),
+                    Tag::TableHead => Some("#row[\n".to_string()),
+                    Tag::TableCell => Some("#cell[".to_string()),
                     _ => todo!(),
                 };
 
@@ -143,6 +159,10 @@ where
                     },
                     Tag::Show(_, _, _, _) => Some("\n".to_string()),
                     Tag::Quote(_, _, _) => Some("]".to_string()),
+                    Tag::Table(_) => Some("]\n".to_string()),
+                    Tag::TableHead => Some("\n]\n".to_string()),
+                    Tag::TableRow => Some("\n]\n".to_string()),
+                    Tag::TableCell => Some("]".to_string()),
                     _ => todo!(),
                 };
 
@@ -352,5 +372,25 @@ mod tests {
                 "#quote(block: true, quotes: auto, attribution: [some dude])[to be or not to be]";
             assert_eq!(&output, &expected);
         }
+    }
+
+    #[test]
+    fn table_conversion() {
+        let input = vec![
+            Event::Start(Tag::Table(vec![TableCellAlignment::Left, TableCellAlignment::Center])),
+            Event::Start(Tag::TableRow),
+            Event::Start(Tag::TableCell),
+            Event::Text("Header 1".into()),
+            Event::End(Tag::TableCell),
+            Event::Start(Tag::TableCell),
+            Event::Text("Header 2".into()),
+            Event::End(Tag::TableCell),
+            Event::End(Tag::TableRow),
+            Event::End(Tag::Table(vec![TableCellAlignment::Left, TableCellAlignment::Center])),
+        ];
+
+        let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+        let expected = "#table(align: [left, center])[\n#row[\n#cell[Header 1]#cell[Header 2]\n]\n]\n";
+        assert_eq!(output, expected);
     }
 }
