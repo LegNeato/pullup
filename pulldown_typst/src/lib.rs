@@ -100,7 +100,8 @@ pub enum Tag<'a> {
     /// A list item.
     Item,
     /// A quote.
-    /// The second argument is the attribution value if it exists.
+    /// The second argument determines if it should be wrapped in quotes.
+    /// The third argument is the attribution value if it exists.
     ///
     /// See <https://typst.app/docs/reference/model/quote/>.
     Quote(QuoteType, QuoteQuotes, Option<CowStr<'a>>),
