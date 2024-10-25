@@ -158,7 +158,10 @@ where
                         LinkType::Url | LinkType::Autolink => Some("]".to_string()),
                     },
                     Tag::Show(_, _, _, _) => Some("\n".to_string()),
-                    Tag::Quote(_, _, _) => Some("]".to_string()),
+                    Tag::Quote(quote_type, _, _) => Some(match quote_type {
+                        QuoteType::Inline => "]".to_string(),
+                        QuoteType::Block => "]\n".to_string(),
+                    }),
                     Tag::Table(_) => Some("]\n".to_string()),
                     Tag::TableHead => Some("\n]\n".to_string()),
                     Tag::TableRow => Some("\n]\n".to_string()),
@@ -348,7 +351,7 @@ mod tests {
                 Event::End(Tag::Quote(QuoteType::Block, QuoteQuotes::Auto, None)),
             ];
             let output = TypstMarkup::new(input.into_iter()).collect::<String>();
-            let expected = "#quote(block: true, quotes: auto,)[to be or not to be]";
+            let expected = "#quote(block: true, quotes: auto,)[to be or not to be]\n";
             assert_eq!(&output, &expected);
         }
 
@@ -369,8 +372,46 @@ mod tests {
             ];
             let output = TypstMarkup::new(input.into_iter()).collect::<String>();
             let expected =
-                "#quote(block: true, quotes: auto, attribution: [some dude])[to be or not to be]";
+                "#quote(block: true, quotes: auto, attribution: [some dude])[to be or not to be]\n";
             assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn inline_no_newline() {
+            let input = vec![
+                Event::Start(Tag::Quote(
+                    QuoteType::Inline,
+                    QuoteQuotes::Auto,
+                    Some("some dude".into()),
+                )),
+                Event::Text("whatever".into()),
+                Event::End(Tag::Quote(
+                    QuoteType::Inline,
+                    QuoteQuotes::Auto,
+                    Some("some dude".into()),
+                )),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            assert!(!output.contains('\n'));
+        }
+
+        #[test]
+        fn block_has_newline() {
+            let input = vec![
+                Event::Start(Tag::Quote(
+                    QuoteType::Block,
+                    QuoteQuotes::Auto,
+                    Some("some dude".into()),
+                )),
+                Event::Text("whatever".into()),
+                Event::End(Tag::Quote(
+                    QuoteType::Block,
+                    QuoteQuotes::Auto,
+                    Some("some dude".into()),
+                )),
+            ];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            assert!(output.contains('\n'));
         }
     }
 
