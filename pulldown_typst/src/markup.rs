@@ -1,4 +1,4 @@
-use crate::{Event, LinkType, QuoteQuotes, QuoteType, ShowType, Tag, TableCellAlignment};
+use crate::{Event, LinkType, QuoteQuotes, QuoteType, ShowType, TableCellAlignment, Tag};
 use std::{collections::VecDeque, fmt::Write, io::ErrorKind};
 
 fn typst_escape(s: &str) -> String {
@@ -418,7 +418,10 @@ mod tests {
     #[test]
     fn table_conversion() {
         let input = vec![
-            Event::Start(Tag::Table(vec![TableCellAlignment::Left, TableCellAlignment::Center])),
+            Event::Start(Tag::Table(vec![
+                TableCellAlignment::Left,
+                TableCellAlignment::Center,
+            ])),
             Event::Start(Tag::TableRow),
             Event::Start(Tag::TableCell),
             Event::Text("Header 1".into()),
@@ -427,11 +430,15 @@ mod tests {
             Event::Text("Header 2".into()),
             Event::End(Tag::TableCell),
             Event::End(Tag::TableRow),
-            Event::End(Tag::Table(vec![TableCellAlignment::Left, TableCellAlignment::Center])),
+            Event::End(Tag::Table(vec![
+                TableCellAlignment::Left,
+                TableCellAlignment::Center,
+            ])),
         ];
 
         let output = TypstMarkup::new(input.into_iter()).collect::<String>();
-        let expected = "#table(align: [left, center])[\n#row[\n#cell[Header 1]#cell[Header 2]\n]\n]\n";
+        let expected =
+            "#table(align: [left, center])[\n#row[\n#cell[Header 1]#cell[Header 2]\n]\n]\n";
         assert_eq!(output, expected);
     }
 }
