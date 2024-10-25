@@ -186,14 +186,13 @@ converter!(
 });
 
 converter!(
-    /// Convert Markdown hard breaks to Typst paragraph breaks.
+    /// Convert Markdown hard breaks to Typst line breaks.
     ConvertHardBreaks,
     ParserEvent<'a> => ParserEvent<'a>,
     |this: &mut Self| {
-        // TODO: not sure that this mapping is correct.
         match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::HardBreak)) => {
-                Some(ParserEvent::Typst(typst::Event::Parbreak))
+                Some(ParserEvent::Typst(typst::Event::Linebreak))
             },
             x => x,
     }
@@ -770,13 +769,16 @@ baz
     }
 
     /// Markdown docs:
-    /// * https://spec.commonmark.org/0.30/#text
+    /// * https://spec.commonmark.org/0.31.2/#hard-line-breaks
+    /// * https://spec.commonmark.org/0.31.2/#soft-line-breaks
     /// Typst docs:
     /// * https://typst.app/docs/reference/text/
     mod breaks {
         use super::*;
+
         #[test]
         fn soft() {
+            // Note that "foo" DOES NOT HAVE two spaces after it.
             let md = "\
 foo
 bar
@@ -809,7 +811,7 @@ bar
                 vec![
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("foo"))),
-                    Typst(TypstEvent::Parbreak),
+                    Typst(TypstEvent::Linebreak),
                     Markdown(MdEvent::Text(CowStr::Borrowed("bar"))),
                     Markdown(MdEvent::End(MdTag::Paragraph)),
                 ]
