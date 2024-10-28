@@ -195,7 +195,27 @@ where
             Some(Event::Linebreak) => Some("#linebreak()\n".to_string()),
             Some(Event::Parbreak) => Some("#parbreak()\n".to_string()),
             Some(Event::PageBreak) => Some("#pagebreak()\n".to_string()),
-            Some(Event::Line) => todo!(),
+            Some(Event::Line(start, end, length, angle, stroke)) => {
+                let mut parts = vec![];
+
+                if let Some(start) = start {
+                    parts.push(format!("start: ({}, {})", start.0, start.1));
+                }
+                if let Some(end) = end {
+                    parts.push(format!("end: ({}, {})", end.0, end.1));
+                }
+                if let Some(length) = length {
+                    parts.push(format!("length: {}", length));
+                }
+                if let Some(angle) = angle {
+                    parts.push(format!("angle: {}", angle));
+                }
+                if let Some(stroke) = stroke {
+                    parts.push(format!("stroke: {}", stroke));
+                }
+
+                Some(format!("#line({})\n", parts.join(", ")))
+            }
             Some(Event::Let(lhs, rhs)) => Some(format!("#let {lhs} = {rhs}\n")),
             Some(Event::FunctionCall(v, f, args)) => {
                 let args = args.join(", ");
@@ -412,6 +432,84 @@ mod tests {
             ];
             let output = TypstMarkup::new(input.into_iter()).collect::<String>();
             assert!(output.contains('\n'));
+        }
+    }
+
+    mod line {
+        use super::*;
+
+        #[test]
+        fn basic() {
+            let input = vec![Event::Line(None, None, None, None, None)];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#line()\n";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn start() {
+            let input = vec![Event::Line(
+                Some(("1".into(), "2".into())),
+                None,
+                None,
+                None,
+                None,
+            )];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#line(start: (1, 2))\n";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn end() {
+            let input = vec![Event::Line(
+                None,
+                Some(("3".into(), "4".into())),
+                None,
+                None,
+                None,
+            )];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#line(end: (3, 4))\n";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn length() {
+            let input = vec![Event::Line(None, None, Some("5".into()), None, None)];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#line(length: 5)\n";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn angle() {
+            let input = vec![Event::Line(None, None, None, Some("6".into()), None)];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#line(angle: 6)\n";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn stroke() {
+            let input = vec![Event::Line(None, None, None, None, Some("7".into()))];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#line(stroke: 7)\n";
+            assert_eq!(&output, &expected);
+        }
+
+        #[test]
+        fn all() {
+            let input = vec![Event::Line(
+                Some(("1".into(), "2".into())),
+                Some(("3".into(), "4".into())),
+                Some("5".into()),
+                Some("6".into()),
+                Some("7".into()),
+            )];
+            let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+            let expected = "#line(start: (1, 2), end: (3, 4), length: 5, angle: 6, stroke: 7)\n";
+            assert_eq!(&output, &expected);
         }
     }
 

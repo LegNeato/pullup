@@ -21,8 +21,23 @@ pub enum Event<'a> {
     Parbreak,
     /// A page break.
     PageBreak,
-    /// A line.
-    Line,
+    /// A line. The first field is the start point, the second is the end point, the
+    /// third field is the length, the fourth is the angle, and the fifth is the stroke.
+    ///
+    /// See <https://typst.app/docs/reference/visualize/line/>.
+    // TODO: make this strongly typed.
+    Line(
+        // start
+        Option<(CowStr<'a>, CowStr<'a>)>,
+        // end
+        Option<(CowStr<'a>, CowStr<'a>)>,
+        // length
+        Option<CowStr<'a>>,
+        // angle
+        Option<CowStr<'a>>,
+        // stroke
+        Option<CowStr<'a>>,
+    ),
     /// A let binding. First argument is lhs, second is rhs.
     ///
     /// See <https://typst.app/docs/reference/scripting/#bindings>.
