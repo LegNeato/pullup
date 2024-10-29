@@ -5,17 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.3.7 (2024-09-08)
+## 0.3.8 (2024-10-28)
 
 ### Bug Fixes
 
- - <csr-id-b260901620ab890463a47adee4db90977466bb83/> Add tables to builder.
+ - <csr-id-491dc239a691e4e36bfc5043f533bca50964995c/> Translate markdown hard breaks to typst linebreaks.
+   See https://github.com/LegNeato/mdbook-typst/issues/11.
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
  - 1 commit contributed to the release.
+ - 49 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +28,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Translate markdown hard breaks to typst linebreaks. ([`491dc23`](https://github.com/LegNeato/pullup/commit/491dc239a691e4e36bfc5043f533bca50964995c))
+</details>
+
+## 0.3.7 (2024-09-08)
+
+### Bug Fixes
+
+ - <csr-id-b260901620ab890463a47adee4db90977466bb83/> Add tables to builder.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Release pullup v0.3.7 ([`09478a6`](https://github.com/LegNeato/pullup/commit/09478a6127c682ac3cdc16a17bf15e953571078b))
     - Add tables to builder. ([`b260901`](https://github.com/LegNeato/pullup/commit/b260901620ab890463a47adee4db90977466bb83))
 </details>
 
@@ -46,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 6 commits contributed to the release over the course of 1 calendar day.
+ - 6 commits contributed to the release.
  - 188 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#1](https://github.com/LegNeato/pullup/issues/1), [#2](https://github.com/LegNeato/pullup/issues/2)
@@ -147,7 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 22 commits contributed to the release over the course of 9 calendar days.
+ - 22 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 

@@ -5,7 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.7 (2024-10-28)
+
+### Chore
+
+ - <csr-id-f7194610fb257dc67dece3916d243578c864cc3f/> fix formatting.
+
+### New Features
+
+ - <csr-id-baf8ccf8c3c0425c62bf9ae943a5e520148437e6/> Add support for typst lines.
+
+### Bug Fixes
+
+ - <csr-id-2c3f212779c2f3e912dd11e47df135c8e964f658/> Fix comment now that there are three args.
+ - <csr-id-871441f01c9a76b09c83dc28ad016b70eae3247a/> Include newline for block quotes.
+   Found in https://github.com/LegNeato/mdbook-typst/issues/15.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release.
+ - 49 days passed between releases.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add support for typst lines. ([`baf8ccf`](https://github.com/LegNeato/pullup/commit/baf8ccf8c3c0425c62bf9ae943a5e520148437e6))
+    - Fix comment now that there are three args. ([`2c3f212`](https://github.com/LegNeato/pullup/commit/2c3f212779c2f3e912dd11e47df135c8e964f658))
+    - Fix formatting. ([`f719461`](https://github.com/LegNeato/pullup/commit/f7194610fb257dc67dece3916d243578c864cc3f))
+    - Include newline for block quotes. ([`871441f`](https://github.com/LegNeato/pullup/commit/871441f01c9a76b09c83dc28ad016b70eae3247a))
+</details>
+
 ## 0.3.6 (2024-09-08)
+
+<csr-id-92793adefa23509ec2490934767a7e2922f23742/>
+<csr-id-eb7246dc692d7010e8a4eef897500d0daf77581e/>
 
 ### Chore
 
@@ -23,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 1 calendar day.
+ - 6 commits contributed to the release.
  - 188 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#1](https://github.com/LegNeato/pullup/issues/1), [#2](https://github.com/LegNeato/pullup/issues/2)
@@ -39,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#2](https://github.com/LegNeato/pullup/issues/2)**
     - Add support for markdown tables. ([`eb7246d`](https://github.com/LegNeato/pullup/commit/eb7246dc692d7010e8a4eef897500d0daf77581e))
  * **Uncategorized**
+    - Release pulldown_typst v0.3.6 ([`73e09c5`](https://github.com/LegNeato/pullup/commit/73e09c57e5a3fea330e3e5520b6a211edc2d24e7))
     - Make table markup output work ([`5326955`](https://github.com/LegNeato/pullup/commit/5326955c4f1c00c159f7a8fe13e2c2bdd4bcf56b))
     - Release pulldown_mdbook v0.3.2, pulldown_typst v0.3.5, pullup v0.3.5 ([`cf09463`](https://github.com/LegNeato/pullup/commit/cf09463f47a9a5b498584850c6c094e6904a209a))
     - Fix version ([`92793ad`](https://github.com/LegNeato/pullup/commit/92793adefa23509ec2490934767a7e2922f23742))
@@ -131,7 +173,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 15 commits contributed to the release over the course of 9 calendar days.
+ - 15 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 

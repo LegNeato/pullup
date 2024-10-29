@@ -3,7 +3,7 @@ name = "pullup"
 description = "Convert between markup formats"
 license = "MIT OR Apache-2.0"
 authors = ["Christian Legnitto <christian@legnitto.com>"]
-version = "0.3.7"
+version = "0.3.8"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -18,7 +18,7 @@ tracing = ["dep:tracing", "pulldown_typst/tracing", "pulldown_mdbook/tracing"]
 [dependencies]
 pulldown-cmark = { version = "0.9.2", optional = true }
 pulldown_mdbook = { version = "^0.3.2", path = "../pulldown_mdbook", optional = true }
-pulldown_typst = { version = "^0.3.6", path = "../pulldown_typst", optional = true }
+pulldown_typst = { version = "^0.3.7", path = "../pulldown_typst", optional = true }
 tracing = { version = "0.1.40", optional = true }
 typed-builder = { version = "0.18.0", optional = true }
 
