@@ -102,6 +102,13 @@ where
                         }
                         LinkType::Url | LinkType::Autolink => Some(format!("#link(\"{url}\")[")),
                     },
+                    Tag::Image(ref src, ref alt) => {
+                        if alt.is_empty() {
+                            Some(format!("#image(\"{src}\")"))
+                        } else {
+                            Some(format!("#figure(image(\"{src}\"), caption: [{alt}])"))
+                        }
+                    }
                     Tag::Quote(ref ty, ref quotes, ref attribution) => {
                         let block = match ty {
                             &QuoteType::Block => "block: true,",
@@ -171,6 +178,7 @@ where
                         LinkType::Content => Some("]".to_string()),
                         LinkType::Url | LinkType::Autolink => Some("]".to_string()),
                     },
+                    Tag::Image(_, _) => Some("\n".to_string()),
                     Tag::Show(_, _, _, _) => Some("\n".to_string()),
                     Tag::Quote(quote_type, _, _) => Some(match quote_type {
                         QuoteType::Inline => "]".to_string(),

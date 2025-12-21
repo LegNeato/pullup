@@ -185,6 +185,25 @@ converter!(
 });
 
 converter!(
+    /// Convert Markdown images to Typst images.
+    ConvertImages,
+    ParserEvent<'a> => ParserEvent<'a>,
+    |this: &mut Self| {
+        match this.iter.next() {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Image(_, url, title)))) => {
+                // Use title as alt text if available, otherwise empty
+                let alt = if title.is_empty() { "".into() } else { title };
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(url, alt))))
+            },
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Image(_, url, title)))) => {
+                let alt = if title.is_empty() { "".into() } else { title };
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Image(url, alt))))
+            },
+            x => x,
+    }
+});
+
+converter!(
     /// Convert Markdown **strong** tags to Typst strong tags.
     ConvertStrong,
     ParserEvent<'a> => ParserEvent<'a>,
@@ -655,6 +674,37 @@ See [Other Section](../other/section.md#anchor) for details.
                     Markdown(MdEvent::End(MdTag::Paragraph)),
                 ]
             );
+        }
+    }
+
+    mod images {
+        use super::*;
+
+        #[test]
+        fn simple_image() {
+            let md = "![alt text](image.png)";
+            let i = ConvertImages::new(MarkdownIter(Parser::new(&md)));
+
+            let events: Vec<_> = i.collect();
+            // Check that we have an image start event
+            assert!(events.iter().any(|e| matches!(
+                e,
+                Typst(TypstEvent::Start(TypstTag::Image(src, _))) if src.as_ref() == "image.png"
+            )));
+        }
+
+        #[test]
+        fn image_with_title() {
+            let md = r#"![alt text](image.png "Image Title")"#;
+            let i = ConvertImages::new(MarkdownIter(Parser::new(&md)));
+
+            let events: Vec<_> = i.collect();
+            // Check that we have an image with title
+            assert!(events.iter().any(|e| matches!(
+                e,
+                Typst(TypstEvent::Start(TypstTag::Image(src, title)))
+                    if src.as_ref() == "image.png" && title.as_ref() == "Image Title"
+            )));
         }
     }
 

@@ -128,6 +128,11 @@ pub enum Tag<'a> {
     /// A link. The first field is the type and the second is the destination URL.
     Link(LinkType, CowStr<'a>),
 
+    /// An image. The first field is the source path/URL, the second is the alt text.
+    ///
+    /// See <https://typst.app/docs/reference/visualize/image/>.
+    Image(CowStr<'a>, CowStr<'a>),
+
     /// A table. The first field is the alignment of each column.
     Table(Vec<TableCellAlignment>),
     /// A table header row. Must come after a #[Tag::Table].
