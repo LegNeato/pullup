@@ -114,21 +114,25 @@ where
                         }
                     }
                     Tag::Table(ref alignment) => {
+                        let columns = alignment.len();
                         let alignments = alignment
                             .iter()
                             .map(|a| match a {
                                 TableCellAlignment::Left => "left",
                                 TableCellAlignment::Center => "center",
                                 TableCellAlignment::Right => "right",
-                                TableCellAlignment::None => "none",
+                                TableCellAlignment::None => "auto",
                             })
                             .collect::<Vec<_>>()
                             .join(", ");
-                        Some(format!("#table(align: [{}])[\n", alignments))
+                        Some(format!(
+                            "#table(\n  columns: {},\n  align: ({}),\n",
+                            columns, alignments
+                        ))
                     }
-                    Tag::TableRow => Some("#row[\n".to_string()),
-                    Tag::TableHead => Some("#row[\n".to_string()),
-                    Tag::TableCell => Some("#cell[".to_string()),
+                    Tag::TableRow => Some("  ".to_string()),
+                    Tag::TableHead => Some("  table.header(".to_string()),
+                    Tag::TableCell => Some("[".to_string()),
                     _ => todo!(),
                 };
 
@@ -162,10 +166,10 @@ where
                         QuoteType::Inline => "]".to_string(),
                         QuoteType::Block => "]\n".to_string(),
                     }),
-                    Tag::Table(_) => Some("]\n".to_string()),
-                    Tag::TableHead => Some("\n]\n".to_string()),
-                    Tag::TableRow => Some("\n]\n".to_string()),
-                    Tag::TableCell => Some("]".to_string()),
+                    Tag::Table(_) => Some(")\n".to_string()),
+                    Tag::TableHead => Some("),\n".to_string()),
+                    Tag::TableRow => Some("\n".to_string()),
+                    Tag::TableCell => Some("], ".to_string()),
                     _ => todo!(),
                 };
 
@@ -520,12 +524,20 @@ mod tests {
                 TableCellAlignment::Left,
                 TableCellAlignment::Center,
             ])),
-            Event::Start(Tag::TableRow),
+            Event::Start(Tag::TableHead),
             Event::Start(Tag::TableCell),
             Event::Text("Header 1".into()),
             Event::End(Tag::TableCell),
             Event::Start(Tag::TableCell),
             Event::Text("Header 2".into()),
+            Event::End(Tag::TableCell),
+            Event::End(Tag::TableHead),
+            Event::Start(Tag::TableRow),
+            Event::Start(Tag::TableCell),
+            Event::Text("Cell 1".into()),
+            Event::End(Tag::TableCell),
+            Event::Start(Tag::TableCell),
+            Event::Text("Cell 2".into()),
             Event::End(Tag::TableCell),
             Event::End(Tag::TableRow),
             Event::End(Tag::Table(vec![
@@ -535,8 +547,7 @@ mod tests {
         ];
 
         let output = TypstMarkup::new(input.into_iter()).collect::<String>();
-        let expected =
-            "#table(align: [left, center])[\n#row[\n#cell[Header 1]#cell[Header 2]\n]\n]\n";
+        let expected = "#table(\n  columns: 2,\n  align: (left, center),\n  table.header([Header 1], [Header 2], ),\n  [Cell 1], [Cell 2], \n)\n";
         assert_eq!(output, expected);
     }
 }

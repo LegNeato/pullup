@@ -1135,5 +1135,36 @@ baz
                 ]
             );
         }
+
+        /// End-to-end test: markdown table -> typst markup
+        #[test]
+        fn table_to_typst_markup() {
+            use crate::typst::TypstFilter;
+            use pulldown_typst::markup::TypstMarkup;
+
+            let md = "\
+| Left | Center | Right |
+|:-----|:------:|------:|
+| A    | B      | C     |
+";
+            // Full conversion pipeline
+            let parser = Parser::new_ext(&md, pulldown_cmark::Options::ENABLE_TABLES);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertTables::new(ConvertText::new(md_iter));
+            let typst_only = TypstFilter(converted);
+            let output: String = TypstMarkup::new(typst_only).collect();
+
+            // Verify the output contains valid Typst table structure
+            assert!(output.contains("#table("));
+            assert!(output.contains("columns: 3"));
+            assert!(output.contains("align: (left, center, right)"));
+            assert!(output.contains("table.header("));
+            assert!(output.contains("[Left]"));
+            assert!(output.contains("[Center]"));
+            assert!(output.contains("[Right]"));
+            assert!(output.contains("[A]"));
+            assert!(output.contains("[B]"));
+            assert!(output.contains("[C]"));
+        }
     }
 }
