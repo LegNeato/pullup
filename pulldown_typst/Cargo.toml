@@ -1,6 +1,6 @@
 [package]
 name = "pulldown_typst"
-version = "0.3.7"
+version = "0.4.0"
 description = "A pull parser for Typst markup"
 license = "MIT OR Apache-2.0"
 edition = "2021"

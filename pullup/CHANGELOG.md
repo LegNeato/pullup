@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9](https://github.com/LegNeato/pullup/compare/pullup-v0.3.8...pullup-v0.3.9) - 2025-12-21
+
+### Added
+
+- Add strikethrough support
+- Add image support for markdown to Typst conversion
+- Add intra-book link support
+
+### Fixed
+
+- Rix typst table support
+
+### Other
+
+- Update dependencies (pulldown-cmark 0.13, typed-builder 0.20, mdbook 0.4.52)
+
 ## 0.3.8 (2024-10-28)
 
 ### Bug Fixes
