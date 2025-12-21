@@ -91,6 +91,7 @@ where
                     }
                     Tag::Emphasis => Some("#emph[".to_string()),
                     Tag::Strong => Some("#strong[".to_string()),
+                    Tag::Strikethrough => Some("#strike[".to_string()),
                     Tag::Link(ref ty, ref url) => match ty {
                         LinkType::Content => {
                             // Check if url is a label reference (starts with <)
@@ -147,7 +148,6 @@ where
                     Tag::TableRow => Some("  ".to_string()),
                     Tag::TableHead => Some("  table.header(".to_string()),
                     Tag::TableCell => Some("[".to_string()),
-                    _ => todo!(),
                 };
 
                 // Set the current tag for later processing and return optional event.
@@ -167,6 +167,7 @@ where
                     Tag::Item => Some("\n".to_string()),
                     Tag::Emphasis => Some("]".to_string()),
                     Tag::Strong => Some("]".to_string()),
+                    Tag::Strikethrough => Some("]".to_string()),
                     Tag::BulletList(_, _) => Some("".to_string()),
                     Tag::NumberedList(_, _, _) => Some("".to_string()),
                     Tag::CodeBlock(_, _) => {
@@ -188,7 +189,6 @@ where
                     Tag::TableHead => Some("),\n".to_string()),
                     Tag::TableRow => Some("\n".to_string()),
                     Tag::TableCell => Some("], ".to_string()),
-                    _ => todo!(),
                 };
 
                 let in_tag = self.tag_queue.pop_back();

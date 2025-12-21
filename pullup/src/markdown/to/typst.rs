@@ -236,6 +236,22 @@ converter!(
 });
 
 converter!(
+    /// Convert Markdown ~~strikethrough~~ tags to Typst strikethrough tags.
+    ConvertStrikethrough,
+    ParserEvent<'a> => ParserEvent<'a>,
+    |this: &mut Self| {
+        match this.iter.next() {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strikethrough))) => {
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Strikethrough)))
+            },
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Strikethrough))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Strikethrough)))
+            },
+            x => x,
+    }
+});
+
+converter!(
     /// Convert Markdown soft breaks to Typst line breaks.
     ConvertSoftBreaks,
     ParserEvent<'a> => ParserEvent<'a>,
@@ -781,6 +797,29 @@ I *love* cake!
                     Markdown(MdEvent::End(MdTag::Paragraph)),
                 ]
             );
+        }
+    }
+
+    mod strikethrough {
+        use super::*;
+
+        #[test]
+        fn convert_strikethrough() {
+            let md = "This is ~~deleted~~ text.";
+            let i = ConvertStrikethrough::new(MarkdownIter(Parser::new_ext(
+                &md,
+                pulldown_cmark::Options::ENABLE_STRIKETHROUGH,
+            )));
+
+            let events: Vec<_> = i.collect();
+            assert!(events.iter().any(|e| matches!(
+                e,
+                Typst(TypstEvent::Start(TypstTag::Strikethrough))
+            )));
+            assert!(events.iter().any(|e| matches!(
+                e,
+                Typst(TypstEvent::End(TypstTag::Strikethrough))
+            )));
         }
     }
 
