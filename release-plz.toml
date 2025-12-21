@@ -1,0 +1,12 @@
+[workspace]
+# Create git releases for each package
+git_release_enable = true
+
+# Create git tags for each package
+git_tag_enable = true
+
+# Update changelog for each package
+changelog_update = true
+
+# Check for semver violations
+semver_check = true
