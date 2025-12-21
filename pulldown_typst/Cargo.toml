@@ -12,4 +12,4 @@ tracing = ["dep:tracing"]
 [dependencies]
 tracing = { version = "0.1.40", optional = true }
 # TODO: Remove this, only using for `CowStr`.
-pulldown-cmark = { version = "0.9.3", default-features = false }
+pulldown-cmark = { version = "0.13", default-features = false }

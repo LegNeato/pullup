@@ -45,7 +45,6 @@ pub struct Conversion<'a, T> {
 }
 
 #[allow(dead_code, non_camel_case_types, missing_docs)]
-#[automatically_derived]
 impl<
         'a,
         T,

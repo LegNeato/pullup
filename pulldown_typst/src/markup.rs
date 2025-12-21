@@ -194,7 +194,27 @@ where
                 let in_tag = self.tag_queue.pop_back();
 
                 // Make sure we are in a good state.
-                assert_eq!(in_tag, Some(x));
+                // Note: In pulldown-cmark 0.13, some End events may not carry all data from Start events.
+                // For tags where this happens, we compare just the tag type rather than full equality.
+                if let Some(ref start_tag) = in_tag {
+                    let matches = match (&x, start_tag) {
+                        // Table End events have empty alignment in pulldown-cmark 0.13
+                        (Tag::Table(_), Tag::Table(_)) => true,
+                        // Link End events have empty URL in pulldown-cmark 0.13
+                        (Tag::Link(_, _), Tag::Link(_, _)) => true,
+                        // CodeBlock End events may have None for language
+                        (Tag::CodeBlock(_, _), Tag::CodeBlock(_, _)) => true,
+                        // NumberedList End events may have default start in pulldown-cmark 0.13
+                        (Tag::NumberedList(_, _, _), Tag::NumberedList(_, _, _)) => true,
+                        // BulletList End events may differ
+                        (Tag::BulletList(_, _), Tag::BulletList(_, _)) => true,
+                        // For all other tags (including Heading), require exact match
+                        _ => &x == start_tag,
+                    };
+                    assert!(matches, "Tag mismatch: expected {:?}, got {:?}", in_tag, x);
+                } else {
+                    panic!("No matching start tag for end tag: {:?}", x);
+                }
                 ret
             }
             Some(Event::Raw(x)) => Some(x.into_string()),

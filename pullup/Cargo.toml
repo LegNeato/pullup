@@ -16,11 +16,11 @@ builder = ["dep:typed-builder"]
 tracing = ["dep:tracing", "pulldown_typst/tracing", "pulldown_mdbook/tracing"]
 
 [dependencies]
-pulldown-cmark = { version = "0.9.2", optional = true }
+pulldown-cmark = { version = "0.13", optional = true }
 pulldown_mdbook = { version = "^0.3.2", path = "../pulldown_mdbook", optional = true }
 pulldown_typst = { version = "^0.3.7", path = "../pulldown_typst", optional = true }
 tracing = { version = "0.1.40", optional = true }
-typed-builder = { version = "0.18.0", optional = true }
+typed-builder = { version = "0.20", optional = true }
 
 [dev-dependencies]
 similar-asserts = "1.5.0"

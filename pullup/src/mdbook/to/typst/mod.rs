@@ -199,7 +199,7 @@ where
             }
             // Heading start in a chapter.
             Some(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                markdown::Event::Start(markdown::Tag::Heading(level, x, y)),
+                markdown::Event::Start(markdown::Tag::Heading { level, id, classes, attrs }),
             ))) => {
                 #[cfg(feature = "tracing")]
                 tracing::trace!("heading start: {}", level);
@@ -227,13 +227,13 @@ where
                 };
                 self.buf
                     .push_back(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                        markdown::Event::Start(markdown::Tag::Heading(new_level, x, y)),
+                        markdown::Event::Start(markdown::Tag::Heading { level: new_level, id, classes, attrs }),
                     )));
                 self.next()
             }
             // Heading end in a chapter.
             Some(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                markdown::Event::End(markdown::Tag::Heading(level, x, y)),
+                markdown::Event::End(markdown::TagEnd::Heading(level)),
             ))) => {
                 #[cfg(feature = "tracing")]
                 tracing::trace!("heading end: {}", level);
@@ -260,7 +260,7 @@ where
                 };
                 self.buf
                     .push_back(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                        markdown::Event::End(markdown::Tag::Heading(new_level, x, y)),
+                        markdown::Event::End(markdown::TagEnd::Heading(new_level)),
                     )));
                 self.next()
             }

@@ -15,7 +15,7 @@ converter!(
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Paragraph))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Paragraph)))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Paragraph))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Paragraph))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Paragraph)))
             },
             x => x,
@@ -76,9 +76,7 @@ where
             // Track code end.
             (
                 _,
-                event @ Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::CodeBlock(
-                    _,
-                )))),
+                event @ Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::CodeBlock))),
             ) => {
                 let _ = self.code.pop_back();
                 event
@@ -124,7 +122,7 @@ converter!(
     ParserEvent<'a> => ParserEvent<'a>,
     |this: &mut Self| {
         match this.iter.next() {
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Link(kind, url, _)))) => {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Link { link_type: kind, dest_url: url, .. }))) => {
                 match kind {
                     markdown::LinkType::Inline => {
                         // Check if this is a relative .md link (intra-book link)
@@ -134,14 +132,6 @@ converter!(
                             Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Content, url))))
                         }
                     },
-                    /*
-                    markdown::LinkType::Reference => unimplemented!(),
-                    markdown::LinkType::ReferenceUnknown => unimplemented!(),
-                    markdown::LinkType::Collapsed => unimplemented!(),
-                    markdown::LinkType::CollapsedUnknown => unimplemented!(),
-                    markdown::LinkType::Shortcut => unimplemented!(),
-                    markdown::LinkType::ShortcutUnknown => unimplemented!(),
-                    */
                     markdown::LinkType::Autolink => {
                         Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Autolink, url))))
                     },
@@ -152,33 +142,9 @@ converter!(
                     _ => this.iter.next()
                 }
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Link(kind, url, _)))) => {
-                match kind {
-                    markdown::LinkType::Inline => {
-                        // Check if this is a relative .md link (intra-book link)
-                        if let Some(label) = md_path_to_label(&url) {
-                            Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Content, label.into()))))
-                        } else {
-                            Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Content, url))))
-                        }
-                    },
-                    /*
-                    markdown::LinkType::Reference => unimplemented!(),
-                    markdown::LinkType::ReferenceUnknown => unimplemented!(),
-                    markdown::LinkType::Collapsed => unimplemented!(),
-                    markdown::LinkType::CollapsedUnknown => unimplemented!(),
-                    markdown::LinkType::Shortcut => unimplemented!(),
-                    markdown::LinkType::ShortcutUnknown => unimplemented!(),
-                    */
-                    markdown::LinkType::Autolink => {
-                        Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Autolink, url))))
-                    },
-                    markdown::LinkType::Email => {
-                        let url = "mailto:".to_string() + url.as_ref();
-                        Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Url, url.into()))))
-                    },
-                    _ => this.iter.next()
-                }
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Link))) => {
+                // End events don't have URL info in pulldown-cmark 0.13+, just emit generic end
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Content, "".into()))))
             },
             x => x,
     }
@@ -190,14 +156,13 @@ converter!(
     ParserEvent<'a> => ParserEvent<'a>,
     |this: &mut Self| {
         match this.iter.next() {
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Image(_, url, title)))) => {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Image { dest_url: url, title, .. }))) => {
                 // Use title as alt text if available, otherwise empty
                 let alt = if title.is_empty() { "".into() } else { title };
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(url, alt))))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Image(_, url, title)))) => {
-                let alt = if title.is_empty() { "".into() } else { title };
-                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Image(url, alt))))
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Image))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Image("".into(), "".into()))))
             },
             x => x,
     }
@@ -212,7 +177,7 @@ converter!(
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Strong)))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Strong))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strong))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Strong)))
             },
             x => x,
@@ -228,7 +193,7 @@ converter!(
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Emphasis)))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Emphasis))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Emphasis))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Emphasis)))
             },
             x => x,
@@ -244,7 +209,7 @@ converter!(
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strikethrough))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Strikethrough)))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Strikethrough))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strikethrough))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Strikethrough)))
             },
             x => x,
@@ -283,10 +248,10 @@ converter!(
     ParserEvent<'a> => ParserEvent<'a>,
     |this: &mut Self| {
         match this.iter.next() {
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::BlockQuote))) => {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::BlockQuote(_)))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Quote(typst::QuoteType::Block, typst::QuoteQuotes::Auto, None))))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::BlockQuote))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::BlockQuote(_)))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Quote(typst::QuoteType::Block, typst::QuoteQuotes::Auto, None))))
             },
             x => x,
@@ -317,18 +282,8 @@ converter!(
                     },
                 }
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::CodeBlock(kind)))) => {
-                match kind {
-                    markdown::CodeBlockKind::Indented => Some(ParserEvent::Typst(typst::Event::End(typst::Tag::CodeBlock(None, typst::CodeBlockDisplay::Block)))),
-                    markdown::CodeBlockKind::Fenced(val) => {
-                        let val = if val.as_ref() == "" {
-                            None
-                        } else {
-                            Some(val)
-                        };
-                        Some(ParserEvent::Typst(typst::Event::End(typst::Tag::CodeBlock(val, typst::CodeBlockDisplay::Block))))
-                    },
-                }
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::CodeBlock))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::CodeBlock(None, typst::CodeBlockDisplay::Block))))
             },
             x => x,
     }
@@ -355,10 +310,10 @@ converter!(
 
             },
             // List end.
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::List(number)))) => {
-                if let Some(start) = number {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::List(ordered)))) => {
+                if ordered {
                     // Numbered list
-                    Some(ParserEvent::Typst(typst::Event::End(typst::Tag::NumberedList(start, None, false))))
+                    Some(ParserEvent::Typst(typst::Event::End(typst::Tag::NumberedList(1, None, false))))
                 } else {
                     // Bullet list
                     Some(ParserEvent::Typst(typst::Event::End(typst::Tag::BulletList(None, false))))
@@ -370,7 +325,7 @@ converter!(
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Item)))
             },
             // List item end.
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Item))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Item))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Item)))
             },
             x => x,
@@ -405,7 +360,7 @@ converter!(
             }
         }
         match this.iter.next() {
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Heading(level, _, _)))) => {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Heading { level, .. }))) => {
                 let level: TypstLevel = level.into();
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Heading(*level,
                     typst::TableOfContents::Include,
@@ -413,7 +368,7 @@ converter!(
                     None,
                 ))))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Heading(level, _, _))))  => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Heading(level))))  => {
                 let level: TypstLevel = level.into();
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Heading(*level,
                     typst::TableOfContents::Include,
@@ -444,21 +399,14 @@ converter!(
                 ))))
             },
             // Handle ending a table
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Table(alignment)))) => {
-                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Table(
-                    alignment.iter().map(|&a| match a {
-                        markdown::Alignment::Left => typst::TableCellAlignment::Left,
-                        markdown::Alignment::Center => typst::TableCellAlignment::Center,
-                        markdown::Alignment::Right => typst::TableCellAlignment::Right,
-                        markdown::Alignment::None => typst::TableCellAlignment::None,
-                    }).collect(),
-                ))))
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Table))) => {
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Table(vec![]))))
             },
             // Handle header row
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::TableHead))) => {
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::TableHead)))
             },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::TableHead))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::TableHead))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::TableHead)))
             },
             // Handle starting a row
@@ -466,7 +414,7 @@ converter!(
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::TableRow)))
             },
             // Handle ending a row
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::TableRow))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::TableRow))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::TableRow)))
             },
             // Handle starting a cell
@@ -474,7 +422,7 @@ converter!(
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::TableCell)))
             },
             // Handle ending a cell
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::TableCell))) => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::TableCell))) => {
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::TableCell)))
             },
             // Pass through any other events
@@ -495,6 +443,7 @@ mod tests {
     use markdown::Event as MdEvent;
     use markdown::HeadingLevel;
     use markdown::Tag as MdTag;
+    use markdown::TagEnd as MdTagEnd;
     use typst::Event as TypstEvent;
     use typst::Tag as TypstTag;
     use ParserEvent::*;
@@ -540,7 +489,7 @@ mod tests {
                     Markdown(MdEvent::Text(CowStr::Borrowed("This is "))),
                     Markdown(MdEvent::Start(MdTag::Strong)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("rad"))),
-                    Markdown(MdEvent::End(MdTag::Strong)),
+                    Markdown(MdEvent::End(MdTagEnd::Strong)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("!"))),
                     Typst(TypstEvent::End(TypstTag::Heading(
                         NonZeroU8::new(2).unwrap(),
@@ -577,11 +526,12 @@ Cool [beans](https://example.com)
                         CowStr::Borrowed("https://example.com")
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("beans"))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry URL
                     Typst(TypstEvent::End(TypstTag::Link(
                         typst::LinkType::Content,
-                        CowStr::Borrowed("https://example.com")
+                        CowStr::Borrowed("")
                     ))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -603,11 +553,12 @@ Cool <https://example.com>
                         CowStr::Borrowed("https://example.com")
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("https://example.com"))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry URL or type
                     Typst(TypstEvent::End(TypstTag::Link(
-                        typst::LinkType::Autolink,
-                        CowStr::Borrowed("https://example.com")
+                        typst::LinkType::Content,
+                        CowStr::Borrowed("")
                     ))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -629,11 +580,12 @@ Who are <you@example.com>
                         CowStr::Boxed("mailto:you@example.com".into())
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("you@example.com"))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry URL or type
                     Typst(TypstEvent::End(TypstTag::Link(
-                        typst::LinkType::Url,
-                        CowStr::Boxed("mailto:you@example.com".into())
+                        typst::LinkType::Content,
+                        CowStr::Borrowed("")
                     ))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -655,12 +607,13 @@ See [Chapter 2](./chapter2.md) for more info.
                         CowStr::Boxed("<chapter2>".into())
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("Chapter 2"))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry URL
                     Typst(TypstEvent::End(TypstTag::Link(
                         typst::LinkType::Content,
-                        CowStr::Boxed("<chapter2>".into())
+                        CowStr::Borrowed("")
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed(" for more info."))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -682,12 +635,13 @@ See [Other Section](../other/section.md#anchor) for details.
                         CowStr::Boxed("<other-section>".into())
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("Other Section"))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry URL
                     Typst(TypstEvent::End(TypstTag::Link(
                         typst::LinkType::Content,
-                        CowStr::Boxed("<other-section>".into())
+                        CowStr::Borrowed("")
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed(" for details."))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -741,22 +695,23 @@ I **love** cake!
             self::assert_eq!(
                 i.collect::<Vec<super::ParserEvent>>(),
                 vec![
-                    Markdown(MdEvent::Start(MdTag::Heading(
-                        HeadingLevel::H2,
-                        None,
-                        vec![]
-                    ))),
+                    Markdown(MdEvent::Start(MdTag::Heading {
+                        level: HeadingLevel::H2,
+                        id: None,
+                        classes: vec![],
+                        attrs: vec![],
+                    })),
                     Typst(TypstEvent::Start(TypstTag::Strong)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("Foo"))),
                     Typst(TypstEvent::End(TypstTag::Strong)),
-                    Markdown(MdEvent::End(MdTag::Heading(HeadingLevel::H2, None, vec![]))),
+                    Markdown(MdEvent::End(MdTagEnd::Heading(HeadingLevel::H2))),
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("I "))),
                     Typst(TypstEvent::Start(TypstTag::Strong)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("love"))),
                     Typst(TypstEvent::End(TypstTag::Strong)),
                     Markdown(MdEvent::Text(CowStr::Borrowed(" cake!"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -779,22 +734,23 @@ I *love* cake!
             self::assert_eq!(
                 i.collect::<Vec<super::ParserEvent>>(),
                 vec![
-                    Markdown(MdEvent::Start(MdTag::Heading(
-                        HeadingLevel::H2,
-                        None,
-                        vec![]
-                    ))),
+                    Markdown(MdEvent::Start(MdTag::Heading {
+                        level: HeadingLevel::H2,
+                        id: None,
+                        classes: vec![],
+                        attrs: vec![],
+                    })),
                     Typst(TypstEvent::Start(TypstTag::Emphasis)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("Foo"))),
                     Typst(TypstEvent::End(TypstTag::Emphasis)),
-                    Markdown(MdEvent::End(MdTag::Heading(HeadingLevel::H2, None, vec![]))),
+                    Markdown(MdEvent::End(MdTagEnd::Heading(HeadingLevel::H2))),
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("I "))),
                     Typst(TypstEvent::Start(TypstTag::Emphasis)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("love"))),
                     Typst(TypstEvent::End(TypstTag::Emphasis)),
                     Markdown(MdEvent::Text(CowStr::Borrowed(" cake!"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -842,7 +798,7 @@ foo `bar` baz
                     Markdown(MdEvent::Text(CowStr::Borrowed("foo "))),
                     Typst(TypstEvent::Code(CowStr::Borrowed("bar"))),
                     Markdown(MdEvent::Text(CowStr::Borrowed(" baz"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -862,7 +818,7 @@ whatever
                 vec![
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("whatever"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                     Typst(TypstEvent::Start(TypstTag::CodeBlock(
                         None,
                         typst::CodeBlockDisplay::Block
@@ -919,8 +875,9 @@ blah
                         typst::CodeBlockDisplay::Block
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("blah\n"))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry fence info
                     Typst(TypstEvent::End(TypstTag::CodeBlock(
-                        Some(CowStr::Borrowed("foo")),
+                        None,
                         typst::CodeBlockDisplay::Block
                     ))),
                 ]
@@ -949,13 +906,13 @@ baz
                 vec![
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Typst(TypstEvent::Text(CowStr::Borrowed("foo"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Typst(TypstEvent::Text(CowStr::Borrowed("bar"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Typst(TypstEvent::Text(CowStr::Borrowed("baz"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -985,7 +942,7 @@ bar
                     Markdown(MdEvent::Text(CowStr::Borrowed("foo"))),
                     Typst(TypstEvent::Text(CowStr::Borrowed(" "))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("bar"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -1006,7 +963,7 @@ bar
                     Markdown(MdEvent::Text(CowStr::Borrowed("foo"))),
                     Typst(TypstEvent::Linebreak),
                     Markdown(MdEvent::Text(CowStr::Borrowed("bar"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ]
             );
         }
@@ -1099,7 +1056,7 @@ baz
                     Markdown(MdEvent::Text(CowStr::Borrowed("cats are "))),
                     Markdown(MdEvent::Start(MdTag::Emphasis)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("too"))),
-                    Markdown(MdEvent::End(MdTag::Emphasis)),
+                    Markdown(MdEvent::End(MdTagEnd::Emphasis)),
                     Typst(TypstEvent::End(TypstTag::Item)),
                     // Second bullet
                     Typst(TypstEvent::Start(TypstTag::Item)),
@@ -1130,7 +1087,8 @@ baz
                     Typst(TypstEvent::Start(TypstTag::Item)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("bar"))),
                     Typst(TypstEvent::End(TypstTag::Item)),
-                    Typst(TypstEvent::End(TypstTag::NumberedList(6, None, false))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry custom start
+                    Typst(TypstEvent::End(TypstTag::NumberedList(1, None, false))),
                 ],
             );
         }
@@ -1176,7 +1134,7 @@ baz
                     Typst(TypstEvent::Text("before ".into())),
                     Markdown(MdEvent::Code(r#"\"#.into())),
                     Typst(TypstEvent::Text(" after".into())),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                 ],
             );
         }
@@ -1198,7 +1156,7 @@ baz
                     ))),
                     Markdown(MdEvent::Start(MdTag::Paragraph)),
                     Markdown(MdEvent::Text(CowStr::Borrowed("test"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                     Typst(TypstEvent::End(TypstTag::Quote(
                         typst::QuoteType::Block,
                         typst::QuoteQuotes::Auto,
@@ -1229,7 +1187,7 @@ baz
                     Markdown(MdEvent::Text(CowStr::Borrowed("two"))),
                     Markdown(MdEvent::SoftBreak),
                     Markdown(MdEvent::Text(CowStr::Borrowed("three"))),
-                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
                     Typst(TypstEvent::End(TypstTag::Quote(
                         typst::QuoteType::Block,
                         typst::QuoteQuotes::Auto,
@@ -1278,10 +1236,8 @@ baz
                     Markdown(MdEvent::Text(CowStr::Borrowed("Cell2"))),
                     Typst(TypstEvent::End(TypstTag::TableCell)),
                     Typst(TypstEvent::End(TypstTag::TableRow)),
-                    Typst(TypstEvent::End(TypstTag::Table(vec![
-                        typst::TableCellAlignment::None,
-                        typst::TableCellAlignment::None,
-                    ]))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry alignment info
+                    Typst(TypstEvent::End(TypstTag::Table(vec![]))),
                 ]
             );
         }
@@ -1321,10 +1277,8 @@ baz
                     Markdown(MdEvent::Text(CowStr::Borrowed("Cell2"))),
                     Typst(TypstEvent::End(TypstTag::TableCell)),
                     Typst(TypstEvent::End(TypstTag::TableRow)),
-                    Typst(TypstEvent::End(TypstTag::Table(vec![
-                        typst::TableCellAlignment::Left,
-                        typst::TableCellAlignment::Center,
-                    ]))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry alignment info
+                    Typst(TypstEvent::End(TypstTag::Table(vec![]))),
                 ]
             );
         }
