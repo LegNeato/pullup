@@ -64,7 +64,7 @@ where
                             .to_string(),
                         ),
                     },
-                    Tag::Heading(n, _, _) => Some(format!("{} ", "=".repeat(n.get().into()))),
+                    Tag::Heading(n, _, _, _) => Some(format!("{} ", "=".repeat(n.get().into()))),
                     // TODO: get the number of backticks / tildes somehow.
                     Tag::CodeBlock(ref fence, ref _display) => {
                         let depth = self.codeblock_queue.len();
@@ -92,7 +92,14 @@ where
                     Tag::Emphasis => Some("#emph[".to_string()),
                     Tag::Strong => Some("#strong[".to_string()),
                     Tag::Link(ref ty, ref url) => match ty {
-                        LinkType::Content => Some(format!("#link(\"{url}\")[")),
+                        LinkType::Content => {
+                            // Check if url is a label reference (starts with <)
+                            if url.starts_with('<') && url.ends_with('>') {
+                                Some(format!("#link({url})["))
+                            } else {
+                                Some(format!("#link(\"{url}\")["))
+                            }
+                        }
                         LinkType::Url | LinkType::Autolink => Some(format!("#link(\"{url}\")[")),
                     },
                     Tag::Quote(ref ty, ref quotes, ref attribution) => {
@@ -146,7 +153,10 @@ where
             Some(Event::End(x)) => {
                 let ret = match x {
                     Tag::Paragraph => Some("]\n".to_string()),
-                    Tag::Heading(_, _, _) => Some("\n".to_string()),
+                    Tag::Heading(_, _, _, ref label) => Some(match label {
+                        Some(l) => format!(" <{}>\n", l),
+                        None => "\n".to_string(),
+                    }),
                     Tag::Item => Some("\n".to_string()),
                     Tag::Emphasis => Some("]".to_string()),
                     Tag::Strong => Some("]".to_string()),

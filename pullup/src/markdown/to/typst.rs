@@ -88,6 +88,36 @@ where
     }
 }
 
+/// Convert a relative markdown path to a Typst label reference.
+/// E.g., "./chapter.md" -> "<chapter>", "../foo/bar.md#section" -> "<foo-bar>"
+fn md_path_to_label(url: &str) -> Option<String> {
+    // Only handle relative paths to .md files
+    if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("mailto:") {
+        return None;
+    }
+    if !url.contains(".md") {
+        return None;
+    }
+
+    // Extract the path part (before any # anchor)
+    let path = url.split('#').next().unwrap_or(url);
+
+    // Remove .md extension and convert to label format
+    let label = path
+        .trim_start_matches("./")
+        .trim_start_matches("../")
+        .trim_end_matches(".md")
+        .replace('/', "-")
+        .replace('\\', "-")
+        .to_lowercase();
+
+    if label.is_empty() {
+        None
+    } else {
+        Some(format!("<{}>", label))
+    }
+}
+
 converter!(
     /// Convert Markdown links to Typst links.
     ConvertLinks,
@@ -96,7 +126,14 @@ converter!(
         match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Link(kind, url, _)))) => {
                 match kind {
-                    markdown::LinkType::Inline => Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Content, url)))),
+                    markdown::LinkType::Inline => {
+                        // Check if this is a relative .md link (intra-book link)
+                        if let Some(label) = md_path_to_label(&url) {
+                            Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Content, label.into()))))
+                        } else {
+                            Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Content, url))))
+                        }
+                    },
                     /*
                     markdown::LinkType::Reference => unimplemented!(),
                     markdown::LinkType::ReferenceUnknown => unimplemented!(),
@@ -117,7 +154,14 @@ converter!(
             },
             Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Link(kind, url, _)))) => {
                 match kind {
-                    markdown::LinkType::Inline => Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Content, url)))),
+                    markdown::LinkType::Inline => {
+                        // Check if this is a relative .md link (intra-book link)
+                        if let Some(label) = md_path_to_label(&url) {
+                            Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Content, label.into()))))
+                        } else {
+                            Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Link(typst::LinkType::Content, url))))
+                        }
+                    },
                     /*
                     markdown::LinkType::Reference => unimplemented!(),
                     markdown::LinkType::ReferenceUnknown => unimplemented!(),
@@ -331,6 +375,7 @@ converter!(
                 Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Heading(*level,
                     typst::TableOfContents::Include,
                     typst::Bookmarks::Include,
+                    None,
                 ))))
             },
             Some(ParserEvent::Markdown(markdown::Event::End(markdown::Tag::Heading(level, _, _))))  => {
@@ -338,6 +383,7 @@ converter!(
                 Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Heading(*level,
                     typst::TableOfContents::Include,
                     typst::Bookmarks::Include,
+                    None,
                 ))))
             },
             x => x,
@@ -441,17 +487,20 @@ mod tests {
                         NonZeroU8::new(1).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
+                        None,
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("Greetings"))),
                     Typst(TypstEvent::End(TypstTag::Heading(
                         NonZeroU8::new(1).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
+                        None,
                     ))),
                     Typst(TypstEvent::Start(TypstTag::Heading(
                         NonZeroU8::new(2).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
+                        None,
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("This is "))),
                     Markdown(MdEvent::Start(MdTag::Strong)),
@@ -462,6 +511,7 @@ mod tests {
                         NonZeroU8::new(2).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
+                        None,
                     ))),
                 ]
             );
@@ -548,6 +598,60 @@ Who are <you@example.com>
                         typst::LinkType::Url,
                         CowStr::Boxed("mailto:you@example.com".into())
                     ))),
+                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                ]
+            );
+        }
+
+        #[test]
+        fn intra_book_link() {
+            let md = "\
+See [Chapter 2](./chapter2.md) for more info.
+";
+            let i = ConvertLinks::new(MarkdownIter(Parser::new(&md)));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Markdown(MdEvent::Start(MdTag::Paragraph)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("See "))),
+                    Typst(TypstEvent::Start(TypstTag::Link(
+                        typst::LinkType::Content,
+                        CowStr::Boxed("<chapter2>".into())
+                    ))),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Chapter 2"))),
+                    Typst(TypstEvent::End(TypstTag::Link(
+                        typst::LinkType::Content,
+                        CowStr::Boxed("<chapter2>".into())
+                    ))),
+                    Markdown(MdEvent::Text(CowStr::Borrowed(" for more info."))),
+                    Markdown(MdEvent::End(MdTag::Paragraph)),
+                ]
+            );
+        }
+
+        #[test]
+        fn nested_intra_book_link() {
+            let md = "\
+See [Other Section](../other/section.md#anchor) for details.
+";
+            let i = ConvertLinks::new(MarkdownIter(Parser::new(&md)));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Markdown(MdEvent::Start(MdTag::Paragraph)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("See "))),
+                    Typst(TypstEvent::Start(TypstTag::Link(
+                        typst::LinkType::Content,
+                        CowStr::Boxed("<other-section>".into())
+                    ))),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Other Section"))),
+                    Typst(TypstEvent::End(TypstTag::Link(
+                        typst::LinkType::Content,
+                        CowStr::Boxed("<other-section>".into())
+                    ))),
+                    Markdown(MdEvent::Text(CowStr::Borrowed(" for details."))),
                     Markdown(MdEvent::End(MdTag::Paragraph)),
                 ]
             );

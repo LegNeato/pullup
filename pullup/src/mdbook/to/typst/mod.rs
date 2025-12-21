@@ -134,7 +134,7 @@ where
             Some(ParserEvent::Mdbook(mdbook::Event::Start(mdbook::Tag::Chapter(
                 _,
                 name,
-                _,
+                ref source,
                 _,
             )))) => {
                 #[cfg(feature = "tracing")]
@@ -143,11 +143,27 @@ where
                 // Get how many chapters deep we are.
                 let depth = self.chapters.len();
 
+                // Generate a label from the chapter source path for cross-references.
+                let label: Option<CowStr<'_>> = source.as_ref().and_then(|s| match s {
+                    mdbook::ChapterSource::Path(path) => {
+                        // Convert path to label: remove .md, replace / with -
+                        let label = path
+                            .to_string_lossy()
+                            .trim_end_matches(".md")
+                            .replace('/', "-")
+                            .replace('\\', "-")
+                            .to_lowercase();
+                        Some(label.into())
+                    }
+                    mdbook::ChapterSource::Url(_) => None,
+                });
+
                 // Create a Typst heading start event for the chapter.
                 let tag = typst::Tag::Heading(
                     NonZeroU8::new((1 + depth).try_into().expect("nonzero")).expect("nonzero"),
                     typst::TableOfContents::Include,
                     typst::Bookmarks::Include,
+                    label,
                 );
 
                 let start_event = ParserEvent::Typst(typst::Event::Start(tag.clone()));

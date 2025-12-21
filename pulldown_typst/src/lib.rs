@@ -94,9 +94,9 @@ pub enum Tag<'a> {
     ),
 
     /// A heading. The first field indicates the level of the heading, the second if it
-    /// should be included in outline, and the third if it should be included in
-    /// bookmarks.
-    Heading(NonZeroU8, TableOfContents, Bookmarks),
+    /// should be included in outline, the third if it should be included in
+    /// bookmarks, and the fourth is an optional label for cross-references.
+    Heading(NonZeroU8, TableOfContents, Bookmarks, Option<CowStr<'a>>),
 
     /// A code block. The first argument is the
     /// fenced value if it exists, the second is how it should be displayed.
