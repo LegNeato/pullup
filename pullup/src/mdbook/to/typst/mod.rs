@@ -95,9 +95,9 @@ converter!(
 
 #[derive(Debug)]
 pub struct ConvertChapter<'a, T> {
-    /// Stack of chapter labels for tracking nesting depth and current chapter path.
-    /// Each entry is the label derived from the chapter's source path.
-    chapter_labels: VecDeque<Option<String>>,
+    /// Stack of chapter info for tracking nesting depth and current chapter path.
+    /// Each entry is (label, source_path) where label is derived from the source path.
+    chapter_info: VecDeque<Option<(String, std::path::PathBuf)>>,
     buf: VecDeque<ParserEvent<'a>>,
     iter: T,
 }
@@ -118,7 +118,7 @@ where
     #[allow(dead_code)]
     fn new(iter: T) -> Self {
         Self {
-            chapter_labels: VecDeque::new(),
+            chapter_info: VecDeque::new(),
             buf: VecDeque::new(),
             iter,
         }
@@ -126,7 +126,76 @@ where
 
     /// Get the current chapter label, if any.
     fn current_chapter_label(&self) -> Option<&str> {
-        self.chapter_labels.back().and_then(|l| l.as_deref())
+        self.chapter_info
+            .back()
+            .and_then(|info| info.as_ref().map(|(label, _)| label.as_str()))
+    }
+
+    /// Get the current chapter source path, if any.
+    fn current_chapter_path(&self) -> Option<&std::path::Path> {
+        self.chapter_info
+            .back()
+            .and_then(|info| info.as_ref().map(|(_, path)| path.as_path()))
+    }
+
+    /// Resolve a relative URL against the current chapter's directory.
+    /// Returns the resolved path if the URL is a relative .md file link,
+    /// or None if it's an external URL or non-.md link.
+    fn resolve_relative_url(&self, url_str: &str) -> Option<String> {
+        // Use the url crate to detect absolute URLs
+        // If parsing succeeds, it's an absolute URL (has a scheme) - skip it
+        if url::Url::parse(url_str).is_ok() {
+            return None;
+        }
+
+        // Skip same-page anchors (these are handled separately)
+        if url_str.starts_with('#') {
+            return None;
+        }
+
+        // Only handle .md files (internal book links)
+        if !url_str.contains(".md") {
+            return None;
+        }
+
+        let current_path = self.current_chapter_path()?;
+        let current_dir = current_path.parent().unwrap_or(std::path::Path::new(""));
+
+        // Split URL into path and anchor parts
+        let (path_part, anchor_part) = if let Some(hash_pos) = url_str.find('#') {
+            (&url_str[..hash_pos], Some(&url_str[hash_pos..]))
+        } else {
+            (url_str, None)
+        };
+
+        // Parse the relative path
+        let relative_path = std::path::Path::new(path_part);
+
+        // Resolve the path relative to current directory
+        let mut resolved = current_dir.to_path_buf();
+        for component in relative_path.components() {
+            use std::path::Component;
+            match component {
+                Component::ParentDir => {
+                    resolved.pop();
+                }
+                Component::CurDir => {
+                    // Skip ./ components
+                }
+                Component::Normal(name) => {
+                    resolved.push(name);
+                }
+                _ => {}
+            }
+        }
+
+        // Convert resolved path back to string, adding anchor if present
+        let mut result = resolved.to_string_lossy().to_string();
+        if let Some(anchor) = anchor_part {
+            result.push_str(anchor);
+        }
+
+        Some(result)
     }
 }
 
@@ -157,13 +226,17 @@ where
                 tracing::trace!("chapter start: {}", name);
 
                 // Get how many chapters deep we are.
-                let depth = self.chapter_labels.len();
+                let depth = self.chapter_info.len();
 
-                // Generate a label from the chapter source path for cross-references.
-                let label: Option<String> = source.as_ref().and_then(|s| match s {
-                    mdbook::ChapterSource::Path(path) => Some(chapter_path_to_label(path)),
-                    mdbook::ChapterSource::Url(_) => None,
-                });
+                // Generate a label and store source path for cross-references.
+                let chapter_info: Option<(String, std::path::PathBuf)> =
+                    source.as_ref().and_then(|s| match s {
+                        mdbook::ChapterSource::Path(path) => {
+                            Some((chapter_path_to_label(path), path.clone()))
+                        }
+                        mdbook::ChapterSource::Url(_) => None,
+                    });
+                let label = chapter_info.as_ref().map(|(l, _)| l.clone());
 
                 // Create a Typst heading start event for the chapter.
                 let tag = typst::Tag::Heading(
@@ -181,8 +254,8 @@ where
                     .push_back(ParserEvent::Typst(typst::Event::Text(name.clone())));
                 self.buf.push_back(end_event);
 
-                // Record that we are one chapter deeper, storing the label.
-                self.chapter_labels.push_back(label);
+                // Record that we are one chapter deeper, storing the label and path.
+                self.chapter_info.push_back(chapter_info);
 
                 #[cfg(feature = "tracing")]
                 tracing::trace!("returning: {:?}", start_event);
@@ -196,7 +269,7 @@ where
                 tracing::trace!("chapter end: {}", _name);
 
                 // Record that we are one chapter shallower.
-                let _ = self.chapter_labels.pop_back();
+                let _ = self.chapter_info.pop_back();
                 // Chapters are converted to page break.
                 Some(ParserEvent::Typst(typst::Event::FunctionCall(
                     None,
@@ -218,7 +291,7 @@ where
 
                 use markdown::HeadingLevel;
                 // Get how many chapters deep we are.
-                let depth = self.chapter_labels.len();
+                let depth = self.chapter_info.len();
                 let new_level = match level {
                     HeadingLevel::H1 => {
                         HeadingLevel::try_from(min(1 + depth, 6)).expect("valid heading level")
@@ -279,7 +352,7 @@ where
                 tracing::trace!("heading end: {}", level);
                 use markdown::HeadingLevel;
                 // Get how many chapters deep we are.
-                let depth = self.chapter_labels.len();
+                let depth = self.chapter_info.len();
                 let new_level = match level {
                     HeadingLevel::H1 => {
                         HeadingLevel::try_from(min(1 + depth, 6)).expect("valid heading level")
@@ -304,7 +377,7 @@ where
                     )));
                 self.next()
             }
-            // Link start in a chapter - handle same-page anchors.
+            // Link start in a chapter - handle same-page anchors and resolve relative paths.
             Some(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
                 markdown::Event::Start(markdown::Tag::Link {
                     link_type,
@@ -313,14 +386,16 @@ where
                     id,
                 }),
             ))) => {
-                // Check if this is a same-page anchor link (starts with #)
                 let new_url = if let Some(anchor) = dest_url.strip_prefix('#') {
+                    // Same-page anchor link - prefix the anchor with the chapter label
                     if let Some(chapter_label) = self.current_chapter_label() {
-                        // Prefix the anchor with the chapter label
                         CowStr::from(format!("#{}-{}", chapter_label, anchor.to_lowercase()))
                     } else {
                         dest_url.clone()
                     }
+                } else if let Some(resolved) = self.resolve_relative_url(&dest_url) {
+                    // Cross-file relative link - resolve against current chapter directory
+                    CowStr::from(resolved)
                 } else {
                     dest_url.clone()
                 };
@@ -861,5 +936,173 @@ mod tests {
             Some("ch01-01-installation-troubleshooting".to_string())
         );
         assert_eq!(anchor_label, link_target);
+    }
+
+    #[test]
+    fn relative_sibling_link_resolved() {
+        // https://github.com/LegNeato/mdbook-typst/issues/21
+        // When linking from about/index.md to about-this-handbook.md,
+        // the link should resolve to about/about-this-handbook.md
+        let events = vec![
+            chapter_start("About", "about/index.md"),
+            link_start("about-this-handbook.md"),
+            text("About This Handbook"),
+            link_end(),
+            chapter_end("About"),
+        ];
+
+        let iter = MdbookIter(events.into_iter());
+        let converted = ConvertChapter::new(iter);
+        let result: Vec<_> = converted.collect();
+
+        // Find the link event and check its URL was resolved
+        let link_url = result.iter().find_map(|e| match e {
+            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(markdown::Event::Start(
+                markdown::Tag::Link { dest_url, .. },
+            ))) => Some(dest_url.as_ref().to_string()),
+            _ => None,
+        });
+
+        // The relative link should be resolved to include the directory
+        assert_eq!(link_url, Some("about/about-this-handbook.md".to_string()));
+    }
+
+    #[test]
+    fn relative_parent_link_resolved() {
+        // https://github.com/LegNeato/mdbook-typst/issues/23
+        // When linking from installation/live-images.md to ../index.md,
+        // the link should resolve to index.md (at root)
+        let events = vec![
+            chapter_start("Live Images", "installation/live-images.md"),
+            link_start("../index.md"),
+            text("Index"),
+            link_end(),
+            chapter_end("Live Images"),
+        ];
+
+        let iter = MdbookIter(events.into_iter());
+        let converted = ConvertChapter::new(iter);
+        let result: Vec<_> = converted.collect();
+
+        let link_url = result.iter().find_map(|e| match e {
+            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(markdown::Event::Start(
+                markdown::Tag::Link { dest_url, .. },
+            ))) => Some(dest_url.as_ref().to_string()),
+            _ => None,
+        });
+
+        // The parent-relative link should resolve correctly
+        assert_eq!(link_url, Some("index.md".to_string()));
+    }
+
+    #[test]
+    fn relative_link_with_anchor_resolved() {
+        // https://github.com/LegNeato/mdbook-typst/issues/23
+        // When linking from installation/live-images.md to ../index.md#downloading,
+        // the link should resolve to index.md#downloading
+        let events = vec![
+            chapter_start("Live Images", "installation/live-images.md"),
+            link_start("../index.md#downloading-installation-media"),
+            text("downloading"),
+            link_end(),
+            chapter_end("Live Images"),
+        ];
+
+        let iter = MdbookIter(events.into_iter());
+        let converted = ConvertChapter::new(iter);
+        let result: Vec<_> = converted.collect();
+
+        let link_url = result.iter().find_map(|e| match e {
+            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(markdown::Event::Start(
+                markdown::Tag::Link { dest_url, .. },
+            ))) => Some(dest_url.as_ref().to_string()),
+            _ => None,
+        });
+
+        // The relative link with anchor should resolve correctly
+        assert_eq!(
+            link_url,
+            Some("index.md#downloading-installation-media".to_string())
+        );
+    }
+
+    #[test]
+    fn deeply_nested_relative_link_resolved() {
+        // From src/guides/installation/advanced.md linking to ../../about/index.md#getting-started
+        let events = vec![
+            chapter_start("Advanced", "src/guides/installation/advanced.md"),
+            link_start("../../about/index.md#getting-started"),
+            text("Getting Started"),
+            link_end(),
+            chapter_end("Advanced"),
+        ];
+
+        let iter = MdbookIter(events.into_iter());
+        let converted = ConvertChapter::new(iter);
+        let result: Vec<_> = converted.collect();
+
+        let link_url = result.iter().find_map(|e| match e {
+            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(markdown::Event::Start(
+                markdown::Tag::Link { dest_url, .. },
+            ))) => Some(dest_url.as_ref().to_string()),
+            _ => None,
+        });
+
+        // Multiple parent dir refs should be resolved correctly
+        assert_eq!(
+            link_url,
+            Some("src/about/index.md#getting-started".to_string())
+        );
+    }
+
+    #[test]
+    fn external_link_not_modified() {
+        // External URLs should pass through unchanged
+        let events = vec![
+            chapter_start("Installation", "installation.md"),
+            link_start("https://example.com"),
+            text("Example"),
+            link_end(),
+            chapter_end("Installation"),
+        ];
+
+        let iter = MdbookIter(events.into_iter());
+        let converted = ConvertChapter::new(iter);
+        let result: Vec<_> = converted.collect();
+
+        let link_url = result.iter().find_map(|e| match e {
+            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(markdown::Event::Start(
+                markdown::Tag::Link { dest_url, .. },
+            ))) => Some(dest_url.as_ref().to_string()),
+            _ => None,
+        });
+
+        assert_eq!(link_url, Some("https://example.com".to_string()));
+    }
+
+    #[test]
+    fn dot_slash_prefix_resolved() {
+        // ./about-this-handbook.md from about/index.md should resolve to about/about-this-handbook.md
+        let events = vec![
+            chapter_start("About", "about/index.md"),
+            link_start("./about-this-handbook.md"),
+            text("About This Handbook"),
+            link_end(),
+            chapter_end("About"),
+        ];
+
+        let iter = MdbookIter(events.into_iter());
+        let converted = ConvertChapter::new(iter);
+        let result: Vec<_> = converted.collect();
+
+        let link_url = result.iter().find_map(|e| match e {
+            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(markdown::Event::Start(
+                markdown::Tag::Link { dest_url, .. },
+            ))) => Some(dest_url.as_ref().to_string()),
+            _ => None,
+        });
+
+        // ./relative should work the same as plain relative
+        assert_eq!(link_url, Some("about/about-this-handbook.md".to_string()));
     }
 }
