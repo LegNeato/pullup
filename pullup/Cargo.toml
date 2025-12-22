@@ -10,12 +10,13 @@ edition = "2021"
 [features]
 markdown = ["dep:pulldown-cmark"]
 # TODO: Make this work without the markdown feature.
-mdbook = ["dep:pulldown_mdbook", "markdown"]
+mdbook = ["dep:pulldown_mdbook", "dep:html5ever", "markdown"]
 typst = ["dep:pulldown_typst"]
 builder = ["dep:typed-builder"]
 tracing = ["dep:tracing", "pulldown_typst/tracing", "pulldown_mdbook/tracing"]
 
 [dependencies]
+html5ever = { version = "0.29", optional = true }
 pulldown-cmark = { version = "0.13", optional = true }
 pulldown_mdbook = { version = "^0.3.3", path = "../pulldown_mdbook", optional = true }
 pulldown_typst = { version = "^0.4.0", path = "../pulldown_typst", optional = true }

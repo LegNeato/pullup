@@ -75,6 +75,12 @@ pub enum Event<'a> {
     /// Raw string data what will be bassed through directly to typst. Prefer using
     /// other strongly-typed rules.
     Raw(CowStr<'a>),
+
+    /// A label for cross-referencing. The field is the label name without angle brackets.
+    ///
+    /// In Typst, labels are written as `<label-name>` and can be referenced with `@label-name`.
+    /// See <https://typst.app/docs/reference/meta/label/>.
+    Label(CowStr<'a>),
 }
 
 /// Tags for elements that can contain other elements.

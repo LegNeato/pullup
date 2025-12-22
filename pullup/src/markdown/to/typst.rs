@@ -93,13 +93,23 @@ where
 /// - Links with anchors to sections within the book
 ///
 /// E.g., "./chapter.md" -> "<chapter>"
-///       "../other/section.md#anchor" -> "<anchor>"
-///       "ch01-01-installation.html#troubleshooting" -> "<troubleshooting>"
+///       "../other/section.md#anchor" -> "<other-section-anchor>"
+///       "ch01-01-installation.html#troubleshooting" -> "<ch01-01-installation-troubleshooting>"
 ///       "ch01-01-installation.html" -> "<ch01-01-installation>"
 ///       "../std/prelude/index.html" -> None (external to book)
 fn md_path_to_label(url: &str) -> Option<String> {
     // Only handle relative paths, not external URLs
     if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("mailto:") {
+        return None;
+    }
+
+    // Handle same-page anchors (e.g., "#troubleshooting" or "#chapter-troubleshooting")
+    // These are converted to Typst label references
+    if url.starts_with('#') {
+        let anchor = &url[1..];
+        if !anchor.is_empty() {
+            return Some(format!("<{}>", anchor.to_lowercase()));
+        }
         return None;
     }
 
@@ -121,17 +131,9 @@ fn md_path_to_label(url: &str) -> Option<String> {
     let path = parts.next().unwrap_or(url);
     let anchor = parts.next();
 
-    // If there's an anchor, use that as the label (for section links within a page)
-    // The heading converter will create labels from heading IDs
-    if let Some(anchor) = anchor {
-        if !anchor.is_empty() {
-            return Some(format!("<{}>", anchor.to_lowercase()));
-        }
-    }
-
-    // No anchor, use the path as label (for chapter links)
+    // Convert path to label format
     // Strip leading ./ and ../ path components
-    let label = path
+    let path_label = path
         .trim_start_matches("./")
         .trim_start_matches("../")
         .trim_end_matches(".md")
@@ -140,10 +142,26 @@ fn md_path_to_label(url: &str) -> Option<String> {
         .replace('\\', "-")
         .to_lowercase();
 
-    if label.is_empty() {
+    // If there's an anchor, combine path and anchor to form the label
+    // This matches how headings are labeled: chapter-path-heading-id
+    if let Some(anchor) = anchor {
+        if !anchor.is_empty() {
+            let anchor_lower = anchor.to_lowercase();
+            if path_label.is_empty() {
+                // Same-page anchor without path component
+                return Some(format!("<{}>", anchor_lower));
+            } else {
+                // Cross-page anchor: combine path and anchor
+                return Some(format!("<{}-{}>", path_label, anchor_lower));
+            }
+        }
+    }
+
+    // No anchor, use the path as label (for chapter links)
+    if path_label.is_empty() {
         None
     } else {
-        Some(format!("<{}>", label))
+        Some(format!("<{}>", path_label))
     }
 }
 
@@ -372,12 +390,14 @@ converter!(
 
 /// Generate a URL-friendly ID from text, matching mdBook's algorithm.
 /// mdBook does NOT collapse multiple hyphens, so we preserve them.
+/// Underscores are preserved (e.g., macro_rules stays as macro_rules).
 fn generate_heading_id(text: &str) -> String {
     let result: String = text.chars()
         .map(|c| {
-            if c.is_alphanumeric() {
+            if c.is_alphanumeric() || c == '_' {
+                // Preserve alphanumeric and underscores (for things like macro_rules)
                 c.to_ascii_lowercase()
-            } else if c == ' ' || c == '-' || c == '_' {
+            } else if c == ' ' || c == '-' {
                 '-'
             } else {
                 // Skip other characters (punctuation, backticks, etc.)
@@ -552,9 +572,24 @@ where
             }
             Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Heading(level)))) => {
                 let typst_level = Self::level_to_typst(level);
-                // Generate ID from collected text or use explicit ID
-                let id = self.explicit_id.take()
-                    .unwrap_or_else(|| generate_heading_id(&self.heading_text));
+                // Generate ID from heading text
+                let generated_id = generate_heading_id(&self.heading_text);
+
+                // Handle explicit ID from ConvertChapter or markdown
+                // - If starts with "!", it's a complete ID (chapter prefix + existing ID) - use as-is
+                // - Otherwise, it's a chapter prefix that needs the generated ID appended
+                let id = match self.explicit_id.take() {
+                    Some(explicit) if explicit.starts_with('!') => {
+                        // Complete ID - remove the "!" marker and use directly
+                        explicit[1..].to_string()
+                    }
+                    Some(prefix) if !generated_id.is_empty() => {
+                        // Prefix only - append generated ID
+                        format!("{}-{}", prefix, generated_id)
+                    }
+                    Some(prefix) => prefix,
+                    None => generated_id,
+                };
                 let label = if id.is_empty() { None } else { Some(id) };
 
                 // Set up to emit: start, buffered content, end
@@ -691,6 +726,23 @@ mod tests {
                 ]
             );
         }
+
+        #[test]
+        fn preserves_underscores_in_heading_id() {
+            // Underscores should be preserved in heading IDs (e.g., macro_rules)
+            let md = "## Declarative Macros with `macro_rules!`\n";
+            let i = ConvertHeadings::new(MarkdownIter(Parser::new(&md)));
+            let events: Vec<_> = i.collect();
+
+            // Find the heading start event and check its label
+            let label = events.iter().find_map(|e| match e {
+                Typst(TypstEvent::Start(TypstTag::Heading(_, _, _, Some(l)))) => Some(l.as_ref()),
+                _ => None,
+            });
+
+            // The underscore in macro_rules should be preserved
+            self::assert_eq!(label, Some("declarative-macros-with-macro_rules"));
+        }
     }
 
     /// Markdown docs:
@@ -811,8 +863,8 @@ See [Chapter 2](./chapter2.md) for more info.
 
         #[test]
         fn nested_intra_book_link_with_anchor() {
-            // When a link has an anchor (#anchor), we use the anchor as the label
-            // This matches how mdBook section links work
+            // When a link has an anchor (#anchor), we combine path and anchor for the label
+            // This matches how headings are labeled: chapter-path-heading-id
             let md = "\
 See [Other Section](../other/section.md#anchor) for details.
 ";
@@ -825,7 +877,7 @@ See [Other Section](../other/section.md#anchor) for details.
                     Markdown(MdEvent::Text(CowStr::Borrowed("See "))),
                     Typst(TypstEvent::Start(TypstTag::Link(
                         typst::LinkType::Content,
-                        CowStr::Boxed("<anchor>".into())
+                        CowStr::Boxed("<other-section-anchor>".into())
                     ))),
                     Markdown(MdEvent::Text(CowStr::Borrowed("Other Section"))),
                     // Note: End events in pulldown-cmark 0.13 don't carry URL

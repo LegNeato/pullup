@@ -281,6 +281,8 @@ where
             }
             Some(Event::Set(ele, k, v)) => Some(format!("#set {ele}({k}: {v})\n")),
             Some(Event::DocumentSet(k, v)) => Some(format!("#set document({k}: {v})\n")),
+            // Labels must be attached to content in Typst, so we use #[] (empty content)
+            Some(Event::Label(label)) => Some(format!("#[] <{}>", label)),
         }
     }
 }
@@ -561,6 +563,15 @@ mod tests {
             let expected = "#line(start: (1, 2), end: (3, 4), length: 5, angle: 6, stroke: 7)\n";
             assert_eq!(&output, &expected);
         }
+    }
+
+    #[test]
+    fn label_attached_to_empty_content() {
+        // Labels in Typst must be attached to content, so we use #[] (empty content)
+        let input = vec![Event::Label("my-anchor".into())];
+        let output = TypstMarkup::new(input.into_iter()).collect::<String>();
+        let expected = "#[] <my-anchor>";
+        assert_eq!(&output, &expected);
     }
 
     #[test]
