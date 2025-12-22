@@ -11,7 +11,7 @@ edition = "2021"
 markdown = ["dep:pulldown-cmark"]
 # TODO: Make this work without the markdown feature.
 mdbook = ["dep:pulldown_mdbook", "dep:html5ever", "dep:url", "markdown"]
-typst = ["dep:pulldown_typst"]
+typst = ["dep:pulldown_typst", "dep:html5ever"]
 builder = ["dep:typed-builder"]
 tracing = ["dep:tracing", "pulldown_typst/tracing", "pulldown_mdbook/tracing"]
 
