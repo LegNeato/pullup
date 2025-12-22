@@ -45,7 +45,7 @@ pub enum Event<'a> {
     /// A function call. The first field is the target variable (without `#`), the
     /// second is the function name, and the third is a list of arguments.
     ///
-    /// If calling `document()`, prefer [`DocumentFunctionCall`].
+    /// If calling `document()`, prefer [`Event::DocumentFunctionCall`].
     // TODO: make this strongly typed.
     FunctionCall(Option<CowStr<'a>>, CowStr<'a>, Vec<CowStr<'a>>),
     /// A `document` function call. The field is the list of arguments.
@@ -58,7 +58,7 @@ pub enum Event<'a> {
     DocumentFunctionCall(Vec<CowStr<'a>>),
     /// A set rule.
     ///
-    /// If setting document metadata, prefer [`DocumentSet`].
+    /// If setting document metadata, prefer [`Event::DocumentSet`].
     ///
     /// See <https://typst.app/docs/reference/styling/#set-rules>.
     // TODO: make this a tag.
@@ -66,7 +66,7 @@ pub enum Event<'a> {
     /// A `document` set rule. The first field is the parameter name, the second is the
     /// parameter value.
     ///
-    /// Prefer this over the more general [`Set`] as document set rules must appear
+    /// Prefer this over the more general [`Event::Set`] as document set rules must appear
     /// before any content.
     ///
     /// See <https://typst.app/docs/reference/meta/document>.
