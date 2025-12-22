@@ -190,7 +190,8 @@ where
         }
 
         // Convert resolved path back to string, adding anchor if present
-        let mut result = resolved.to_string_lossy().to_string();
+        // Always use forward slashes for URLs (normalize Windows backslashes)
+        let mut result = resolved.to_string_lossy().replace('\\', "/");
         if let Some(anchor) = anchor_part {
             result.push_str(anchor);
         }
