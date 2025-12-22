@@ -111,11 +111,31 @@ where
                         }
                         LinkType::Url | LinkType::Autolink => Some(format!("#link(\"{url}\")[")),
                     },
-                    Tag::Image(ref src, ref alt) => {
+                    Tag::Image(ref src, ref alt, ref class, ref width, ref height) => {
+                        // Build image arguments
+                        let mut img_args = vec![format!("\"{}\"", src)];
+                        if let Some(w) = width {
+                            img_args.push(format!("width: {}", w));
+                        }
+                        if let Some(h) = height {
+                            img_args.push(format!("height: {}", h));
+                        }
+                        let img_call = format!("image({})", img_args.join(", "));
+
+                        // Wrap in figure if alt text present, or use align for centering
                         if alt.is_empty() {
-                            Some(format!("#image(\"{src}\")"))
+                            if class.as_ref().is_some_and(|c| c.contains("center")) {
+                                Some(format!("#align(center)[#{}]", img_call))
+                            } else {
+                                Some(format!("#{}", img_call))
+                            }
+                        } else if class.as_ref().is_some_and(|c| c.contains("center")) {
+                            Some(format!(
+                                "#figure({}, caption: [{}], placement: none)",
+                                img_call, alt
+                            ))
                         } else {
-                            Some(format!("#figure(image(\"{src}\"), caption: [{alt}])"))
+                            Some(format!("#figure({}, caption: [{}])", img_call, alt))
                         }
                     }
                     Tag::Quote(ref ty, ref quotes, ref attribution) => {
@@ -187,7 +207,7 @@ where
                         LinkType::Content => Some("]".to_string()),
                         LinkType::Url | LinkType::Autolink => Some("]".to_string()),
                     },
-                    Tag::Image(_, _) => Some("\n".to_string()),
+                    Tag::Image(_, _, _, _, _) => Some("\n".to_string()),
                     Tag::Show(_, _, _, _) => Some("\n".to_string()),
                     Tag::Quote(quote_type, _, _) => Some(match quote_type {
                         QuoteType::Inline => "]".to_string(),
@@ -211,7 +231,7 @@ where
                         // Link End events have empty URL in pulldown-cmark 0.13
                         (Tag::Link(_, _), Tag::Link(_, _)) => true,
                         // Image End events have empty src/alt in pulldown-cmark 0.13
-                        (Tag::Image(_, _), Tag::Image(_, _)) => true,
+                        (Tag::Image(_, _, _, _, _), Tag::Image(_, _, _, _, _)) => true,
                         // CodeBlock End events may have None for language
                         (Tag::CodeBlock(_, _), Tag::CodeBlock(_, _)) => true,
                         // NumberedList End events may have default start in pulldown-cmark 0.13

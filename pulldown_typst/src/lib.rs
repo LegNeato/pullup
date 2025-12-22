@@ -134,10 +134,23 @@ pub enum Tag<'a> {
     /// A link. The first field is the type and the second is the destination URL.
     Link(LinkType, CowStr<'a>),
 
-    /// An image. The first field is the source path/URL, the second is the alt text.
+    /// An image.
+    ///
+    /// Fields:
+    /// - `src`: The source path or URL
+    /// - `alt`: Alt text, used as figure caption if present
+    /// - `class`: CSS class (e.g., "center" for centering)
+    /// - `width`: Width value (e.g., "50%", "200pt")
+    /// - `height`: Height value (e.g., "100pt")
     ///
     /// See <https://typst.app/docs/reference/visualize/image/>.
-    Image(CowStr<'a>, CowStr<'a>),
+    Image(
+        CowStr<'a>,
+        CowStr<'a>,
+        Option<CowStr<'a>>,
+        Option<CowStr<'a>>,
+        Option<CowStr<'a>>,
+    ),
 
     /// A table. The first field is the alignment of each column.
     Table(Vec<TableCellAlignment>),

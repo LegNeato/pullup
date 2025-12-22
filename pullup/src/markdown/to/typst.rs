@@ -214,10 +214,10 @@ converter!(
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Image { dest_url: url, title, .. }))) => {
                 // Use title as alt text if available, otherwise empty
                 let alt = if title.is_empty() { "".into() } else { title };
-                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(url, alt))))
+                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(url, alt, None, None, None))))
             },
             Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Image))) => {
-                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Image("".into(), "".into()))))
+                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Image("".into(), "".into(), None, None, None))))
             },
             x => x,
     }
@@ -692,6 +692,386 @@ converter!(
     }
 );
 
+/// Filter out paragraph wrappers around standalone images.
+/// In Markdown, standalone images are wrapped in paragraphs, but in Typst
+/// this causes "block element inside paragraph" warnings.
+pub struct FilterImageParagraphs<T> {
+    iter: T,
+    buffer: VecDeque<ParserEvent<'static>>,
+}
+
+impl<'a, T> FilterImageParagraphs<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    pub fn new(iter: T) -> Self {
+        FilterImageParagraphs {
+            iter,
+            buffer: VecDeque::new(),
+        }
+    }
+}
+
+impl<'a, T> Iterator for FilterImageParagraphs<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    type Item = ParserEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Return buffered events first
+        if let Some(event) = self.buffer.pop_front() {
+            // Convert 'static back to 'a (safe because the data outlives the iterator)
+            return Some(unsafe { std::mem::transmute::<ParserEvent<'_>, ParserEvent<'_>>(event) });
+        }
+
+        match self.iter.next() {
+            // When we see a Typst paragraph start, peek ahead to check for image-only content
+            Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Paragraph))) => {
+                // Collect events until we see the paragraph end
+                let mut events: Vec<ParserEvent<'a>> = Vec::new();
+                let mut has_image = false;
+                let mut has_non_image_content = false;
+                let mut in_image = false;
+
+                loop {
+                    match self.iter.next() {
+                        Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Paragraph))) => {
+                            break;
+                        }
+                        Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(
+                            src,
+                            alt,
+                            class,
+                            width,
+                            height,
+                        )))) => {
+                            has_image = true;
+                            in_image = true;
+                            events.push(ParserEvent::Typst(typst::Event::Start(
+                                typst::Tag::Image(src, alt, class, width, height),
+                            )));
+                        }
+                        Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Image(
+                            src,
+                            alt,
+                            class,
+                            width,
+                            height,
+                        )))) => {
+                            in_image = false;
+                            events.push(ParserEvent::Typst(typst::Event::End(typst::Tag::Image(
+                                src, alt, class, width, height,
+                            ))));
+                        }
+                        // Handle HTML <img> tags converted to Raw #image() or #figure()
+                        Some(ParserEvent::Typst(typst::Event::Raw(ref raw)))
+                            if raw.trim_start().starts_with("#image(")
+                                || raw.trim_start().starts_with("#figure(") =>
+                        {
+                            has_image = true;
+                            events.push(ParserEvent::Typst(typst::Event::Raw(raw.clone())));
+                        }
+                        Some(other) => {
+                            // Check if this is meaningful content outside an image
+                            if !in_image {
+                                match &other {
+                                    ParserEvent::Typst(typst::Event::Text(t))
+                                        if t.trim().is_empty() => {}
+                                    ParserEvent::Markdown(markdown::Event::Text(t))
+                                        if t.trim().is_empty() => {}
+                                    ParserEvent::Markdown(markdown::Event::SoftBreak) => {}
+                                    _ => {
+                                        has_non_image_content = true;
+                                    }
+                                }
+                            }
+                            events.push(other);
+                        }
+                        None => break,
+                    }
+                }
+
+                if has_image && !has_non_image_content {
+                    // Image-only paragraph: emit events without paragraph wrapper
+                    for event in events {
+                        let event: ParserEvent<'static> = unsafe { std::mem::transmute(event) };
+                        self.buffer.push_back(event);
+                    }
+                } else {
+                    // Regular paragraph: emit with wrapper
+                    self.buffer.push_back(unsafe {
+                        std::mem::transmute::<ParserEvent<'_>, ParserEvent<'_>>(ParserEvent::Typst(
+                            typst::Event::Start(typst::Tag::Paragraph),
+                        ))
+                    });
+                    for event in events {
+                        let event: ParserEvent<'static> = unsafe { std::mem::transmute(event) };
+                        self.buffer.push_back(event);
+                    }
+                    self.buffer.push_back(unsafe {
+                        std::mem::transmute::<ParserEvent<'_>, ParserEvent<'_>>(ParserEvent::Typst(
+                            typst::Event::End(typst::Tag::Paragraph),
+                        ))
+                    });
+                }
+
+                self.next()
+            }
+            x => x,
+        }
+    }
+}
+
+/// Parsed attributes from an HTML img tag.
+struct HtmlImgAttrs {
+    src: String,
+    alt: String,
+    class: Option<String>,
+    width: Option<String>,
+    height: Option<String>,
+}
+
+/// Extract src, alt, and style (width/height) attributes from an HTML img tag.
+fn extract_html_img_attrs(html: &str) -> Option<HtmlImgAttrs> {
+    use html5ever::tokenizer::{
+        BufferQueue, Tag, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
+    };
+    use std::cell::RefCell;
+
+    struct ImgExtractor {
+        src: RefCell<Option<String>>,
+        alt: RefCell<Option<String>>,
+        class: RefCell<Option<String>>,
+        width: RefCell<Option<String>>,
+        height: RefCell<Option<String>>,
+    }
+
+    impl ImgExtractor {
+        /// Parse width/height from a CSS style string like "width: 50%; height: 100px;"
+        fn parse_style(&self, style: &str) {
+            for part in style.split(';') {
+                let part = part.trim();
+                if let Some((prop, value)) = part.split_once(':') {
+                    let prop = prop.trim().to_lowercase();
+                    let value = value.trim();
+                    if prop == "width" {
+                        *self.width.borrow_mut() = Some(value.to_string());
+                    } else if prop == "height" {
+                        *self.height.borrow_mut() = Some(value.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    impl TokenSink for ImgExtractor {
+        type Handle = ();
+
+        fn process_token(&self, token: Token, _line_number: u64) -> TokenSinkResult<()> {
+            if let Token::TagToken(Tag {
+                kind: TagKind::StartTag,
+                name,
+                attrs,
+                self_closing: _,
+            }) = token
+            {
+                if name.as_ref() == "img" {
+                    for attr in attrs {
+                        let attr_name = attr.name.local.as_ref();
+                        if attr_name == "src" {
+                            *self.src.borrow_mut() = Some(attr.value.to_string());
+                        } else if attr_name == "alt" {
+                            *self.alt.borrow_mut() = Some(attr.value.to_string());
+                        } else if attr_name == "class" {
+                            *self.class.borrow_mut() = Some(attr.value.to_string());
+                        } else if attr_name == "style" {
+                            self.parse_style(&attr.value);
+                        } else if attr_name == "width" {
+                            // Direct width attribute (e.g., width="50%")
+                            *self.width.borrow_mut() = Some(attr.value.to_string());
+                        } else if attr_name == "height" {
+                            // Direct height attribute (e.g., height="100")
+                            *self.height.borrow_mut() = Some(attr.value.to_string());
+                        }
+                    }
+                }
+            }
+            TokenSinkResult::Continue
+        }
+    }
+
+    let sink = ImgExtractor {
+        src: RefCell::new(None),
+        alt: RefCell::new(None),
+        class: RefCell::new(None),
+        width: RefCell::new(None),
+        height: RefCell::new(None),
+    };
+    let tokenizer = Tokenizer::new(sink, TokenizerOpts::default());
+    let buffer = BufferQueue::default();
+    buffer.push_back(html.into());
+    let _ = tokenizer.feed(&buffer);
+    tokenizer.end();
+
+    let src = tokenizer.sink.src.into_inner()?;
+    let alt = tokenizer.sink.alt.into_inner().unwrap_or_default();
+    let class = tokenizer.sink.class.into_inner();
+    let width = tokenizer.sink.width.into_inner();
+    let height = tokenizer.sink.height.into_inner();
+
+    Some(HtmlImgAttrs {
+        src,
+        alt,
+        class,
+        width,
+        height,
+    })
+}
+
+/// Format width/height value for Typst. Adds 'pt' suffix to bare numbers.
+fn format_img_dimension(value: &str) -> String {
+    let value = value.trim();
+    // If it's just a number, assume pixels -> points
+    if value.chars().all(|c| c.is_ascii_digit()) {
+        format!("{}pt", value)
+    } else {
+        value.to_string()
+    }
+}
+
+/// Convert HTML `<img>` tags to Typst Image events.
+/// HTML img is self-closing, so we emit both Start and End events.
+pub struct ConvertHtmlImg<T> {
+    iter: T,
+    pending_end: Option<typst::Tag<'static>>,
+}
+
+impl<'a, T> ConvertHtmlImg<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    pub fn new(iter: T) -> Self {
+        ConvertHtmlImg {
+            iter,
+            pending_end: None,
+        }
+    }
+}
+
+impl<'a, T> Iterator for ConvertHtmlImg<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    type Item = ParserEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // If we have a pending End event, emit it first
+        if let Some(tag) = self.pending_end.take() {
+            return Some(ParserEvent::Typst(typst::Event::End(unsafe {
+                std::mem::transmute::<typst::Tag<'static>, typst::Tag<'a>>(tag)
+            })));
+        }
+
+        match self.iter.next() {
+            Some(ParserEvent::Markdown(markdown::Event::InlineHtml(html))) => {
+                if html.to_lowercase().trim_start().starts_with("<img") {
+                    if let Some(attrs) = extract_html_img_attrs(&html) {
+                        // Queue the End event for next iteration
+                        self.pending_end =
+                            Some(typst::Tag::Image("".into(), "".into(), None, None, None));
+                        // Emit Start event now
+                        return Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(
+                            attrs.src.into(),
+                            attrs.alt.into(),
+                            attrs.class.map(Into::into),
+                            attrs.width.map(|w| format_img_dimension(&w).into()),
+                            attrs.height.map(|h| format_img_dimension(&h).into()),
+                        ))));
+                    }
+                }
+                Some(ParserEvent::Markdown(markdown::Event::InlineHtml(html)))
+            }
+            Some(ParserEvent::Markdown(markdown::Event::Html(html))) => {
+                if html.to_lowercase().trim_start().starts_with("<img") {
+                    if let Some(attrs) = extract_html_img_attrs(&html) {
+                        // Queue the End event for next iteration
+                        self.pending_end =
+                            Some(typst::Tag::Image("".into(), "".into(), None, None, None));
+                        // Emit Start event now
+                        return Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(
+                            attrs.src.into(),
+                            attrs.alt.into(),
+                            attrs.class.map(Into::into),
+                            attrs.width.map(|w| format_img_dimension(&w).into()),
+                            attrs.height.map(|h| format_img_dimension(&h).into()),
+                        ))));
+                    }
+                }
+                Some(ParserEvent::Markdown(markdown::Event::Html(html)))
+            }
+            x => x,
+        }
+    }
+}
+
+/// Convert HTML `<sup>` tags to Typst `#super[]`.
+pub struct ConvertHtmlSup<T> {
+    iter: T,
+    in_sup: bool,
+}
+
+impl<'a, T> ConvertHtmlSup<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    pub fn new(iter: T) -> Self {
+        ConvertHtmlSup {
+            iter,
+            in_sup: false,
+        }
+    }
+}
+
+impl<'a, T> Iterator for ConvertHtmlSup<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    type Item = ParserEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            Some(ParserEvent::Markdown(markdown::Event::InlineHtml(html))) => {
+                let html_lower = html.to_lowercase();
+                if html_lower.trim() == "<sup>" {
+                    self.in_sup = true;
+                    Some(ParserEvent::Typst(typst::Event::Raw("#super[".into())))
+                } else if html_lower.trim() == "</sup>" {
+                    self.in_sup = false;
+                    Some(ParserEvent::Typst(typst::Event::Raw("]".into())))
+                } else {
+                    // Pass through other inline HTML
+                    Some(ParserEvent::Markdown(markdown::Event::InlineHtml(html)))
+                }
+            }
+            Some(ParserEvent::Markdown(markdown::Event::Html(html))) => {
+                let html_lower = html.to_lowercase();
+                if html_lower.trim() == "<sup>" {
+                    self.in_sup = true;
+                    Some(ParserEvent::Typst(typst::Event::Raw("#super[".into())))
+                } else if html_lower.trim() == "</sup>" {
+                    self.in_sup = false;
+                    Some(ParserEvent::Typst(typst::Event::Raw("]".into())))
+                } else {
+                    // Pass through other HTML
+                    Some(ParserEvent::Markdown(markdown::Event::Html(html)))
+                }
+            }
+            x => x,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -970,7 +1350,7 @@ See [Other Section](../other/section.md) for details.
             // Check that we have an image start event
             assert!(events.iter().any(|e| matches!(
                 e,
-                Typst(TypstEvent::Start(TypstTag::Image(src, _))) if src.as_ref() == "image.png"
+                Typst(TypstEvent::Start(TypstTag::Image(src, _, _, _, _))) if src.as_ref() == "image.png"
             )));
         }
 
@@ -983,7 +1363,7 @@ See [Other Section](../other/section.md) for details.
             // Check that we have an image with title
             assert!(events.iter().any(|e| matches!(
                 e,
-                Typst(TypstEvent::Start(TypstTag::Image(src, title)))
+                Typst(TypstEvent::Start(TypstTag::Image(src, title, _, _, _)))
                     if src.as_ref() == "image.png" && title.as_ref() == "Image Title"
             )));
         }
@@ -1621,6 +2001,346 @@ baz
             assert!(output.contains("[A]"));
             assert!(output.contains("[B]"));
             assert!(output.contains("[C]"));
+        }
+    }
+
+    mod filter_image_paragraphs {
+        use super::*;
+
+        #[test]
+        fn standalone_image_not_wrapped_in_paragraph() {
+            use crate::typst::TypstFilter;
+            use pulldown_typst::markup::TypstMarkup;
+
+            let md = "![alt text](image.png)\n";
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            // Run through conversion pipeline
+            let converted = ConvertImages::new(ConvertParagraphs::new(md_iter));
+            let filtered = FilterImageParagraphs::new(converted);
+            let typst_only = TypstFilter(filtered);
+            let output: String = TypstMarkup::new(typst_only).collect();
+
+            // Should NOT contain #par()
+            assert!(
+                !output.contains("#par()"),
+                "Output should not contain #par(): {}",
+                output
+            );
+            // Should contain #image
+            assert!(output.contains("#image("), "Output should contain #image");
+        }
+
+        #[test]
+        fn image_with_text_stays_in_paragraph() {
+            use crate::typst::TypstFilter;
+            use pulldown_typst::markup::TypstMarkup;
+
+            let md = "Some text ![alt text](image.png) more text\n";
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            // Run through conversion pipeline
+            let converted = ConvertText::new(ConvertImages::new(ConvertParagraphs::new(md_iter)));
+            let filtered = FilterImageParagraphs::new(converted);
+            let typst_only = TypstFilter(filtered);
+            let output: String = TypstMarkup::new(typst_only).collect();
+
+            // Should contain #par() since there's text around the image
+            assert!(
+                output.contains("#par()"),
+                "Output should contain #par(): {}",
+                output
+            );
+        }
+
+        #[test]
+        fn html_img_tag_not_wrapped_in_paragraph() {
+            use crate::typst::TypstFilter;
+            use pulldown_typst::markup::TypstMarkup;
+
+            // Simulate what happens when HTML img is converted to Raw #image()
+            // The actual HTML->image conversion happens elsewhere, but we test the filter
+            let events = vec![
+                ParserEvent::Typst(typst::Event::Start(typst::Tag::Paragraph)),
+                ParserEvent::Typst(typst::Event::Raw("#image(\"test.png\")".into())),
+                ParserEvent::Typst(typst::Event::End(typst::Tag::Paragraph)),
+            ];
+
+            let filtered = FilterImageParagraphs::new(events.into_iter());
+            let typst_only = TypstFilter(filtered);
+            let output: String = TypstMarkup::new(typst_only).collect();
+
+            // Should NOT contain #par()
+            assert!(
+                !output.contains("#par()"),
+                "Output should not contain #par(): {}",
+                output
+            );
+            // Should contain #image
+            assert!(
+                output.contains("#image("),
+                "Output should contain #image: {}",
+                output
+            );
+        }
+    }
+
+    mod html_sup {
+        use super::*;
+
+        #[test]
+        fn converts_sup_to_super() {
+            let md = "2<sup>8</sup> = 256";
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlSup::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            // Should have Raw events for #super[ and ]
+            let has_super_start = events.iter().any(|e| {
+                matches!(
+                    e,
+                    ParserEvent::Typst(typst::Event::Raw(s)) if s.as_ref() == "#super["
+                )
+            });
+            let has_super_end = events.iter().any(|e| {
+                matches!(
+                    e,
+                    ParserEvent::Typst(typst::Event::Raw(s)) if s.as_ref() == "]"
+                )
+            });
+
+            assert!(has_super_start, "Should have #super[ event");
+            assert!(has_super_end, "Should have ] event");
+        }
+
+        #[test]
+        fn end_to_end_sup_conversion() {
+            use crate::typst::TypstFilter;
+            use pulldown_typst::markup::TypstMarkup;
+
+            let md = "2<sup>8</sup>";
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlSup::new(ConvertText::new(ConvertParagraphs::new(md_iter)));
+            let typst_only = TypstFilter(converted);
+            let output: String = TypstMarkup::new(typst_only).collect();
+
+            assert!(
+                output.contains("#super["),
+                "Output should contain #super[: {}",
+                output
+            );
+        }
+    }
+
+    mod html_img {
+        use super::*;
+
+        #[test]
+        fn converts_html_img_to_typst_image() {
+            let md = r#"<img src="test.png" alt="Test image">"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            // Should have an Image event with alt text
+            let has_image = events.iter().any(|e| {
+                matches!(
+                    e,
+                    ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(src, alt, _, _, _)))
+                        if src.as_ref() == "test.png" && alt.as_ref() == "Test image"
+                )
+            });
+
+            assert!(has_image, "Should have Image event: {:?}", events);
+        }
+
+        #[test]
+        fn html_img_without_alt_uses_image() {
+            let md = r#"<img src="test.png">"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            // Should have an Image event with empty alt
+            let has_image = events.iter().any(|e| {
+                matches!(
+                    e,
+                    ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(src, alt, _, _, _)))
+                        if src.as_ref() == "test.png" && alt.is_empty()
+                )
+            });
+
+            assert!(has_image, "Should have Image event: {:?}", events);
+        }
+
+        #[test]
+        fn end_to_end_html_img() {
+            use crate::typst::TypstFilter;
+            use pulldown_typst::markup::TypstMarkup;
+
+            let md = r#"<img src="test.png" alt="Test">"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(ConvertParagraphs::new(md_iter));
+            let filtered = FilterImageParagraphs::new(converted);
+            let typst_only = TypstFilter(filtered);
+            let output: String = TypstMarkup::new(typst_only).collect();
+
+            // Should contain #figure but NOT #par()
+            assert!(
+                output.contains("#figure("),
+                "Output should contain #figure: {}",
+                output
+            );
+            assert!(
+                !output.contains("#par()"),
+                "Output should NOT contain #par(): {}",
+                output
+            );
+        }
+
+        #[test]
+        fn html_img_with_style_width() {
+            let md = r#"<img src="test.png" style="width: 50%;">"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            let has_width = events.iter().any(|e| {
+                matches!(
+                    e,
+                    ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(_, _, _, Some(w), _)))
+                        if w.as_ref() == "50%"
+                )
+            });
+
+            assert!(has_width, "Should have width: 50% in output: {:?}", events);
+        }
+
+        #[test]
+        fn html_img_with_width_height_attrs() {
+            let md = r#"<img src="test.png" width="200" height="100">"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            let has_dimensions = events.iter().any(|e| {
+                matches!(
+                    e,
+                    ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(_, _, _, Some(w), Some(h))))
+                        if w.as_ref() == "200pt" && h.as_ref() == "100pt"
+                )
+            });
+
+            assert!(
+                has_dimensions,
+                "Should have width: 200pt and height: 100pt: {:?}",
+                events
+            );
+        }
+
+        #[test]
+        fn html_img_with_class() {
+            let md = r#"<img src="test.png" class="center">"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            let has_class = events.iter().any(|e| {
+                matches!(
+                    e,
+                    ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(_, _, Some(c), _, _)))
+                        if c.as_ref() == "center"
+                )
+            });
+
+            assert!(has_class, "Should have class=center: {:?}", events);
+        }
+
+        #[test]
+        fn html_img_emits_start_and_end_events() {
+            // HTML <img> is self-closing, but we need both Start and End events
+            // for proper tag matching in the markup renderer
+            let md = r#"<img src="test.png">"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            let start_count = events
+                .iter()
+                .filter(|e| {
+                    matches!(
+                        e,
+                        ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(_, _, _, _, _)))
+                    )
+                })
+                .count();
+
+            let end_count = events
+                .iter()
+                .filter(|e| {
+                    matches!(
+                        e,
+                        ParserEvent::Typst(typst::Event::End(typst::Tag::Image(_, _, _, _, _)))
+                    )
+                })
+                .count();
+
+            std::assert_eq!(start_count, 1, "Should have exactly 1 Start event");
+            std::assert_eq!(end_count, 1, "Should have exactly 1 End event");
+        }
+
+        #[test]
+        fn html_img_in_table_emits_matching_events() {
+            // Regression test: HTML <img> inside table cells caused panic
+            // "Tag mismatch - expected Image(...), got TableCell"
+            // because Start(Image) was emitted but End(Image) was not,
+            // so the End(TableCell) was incorrectly matched.
+            let md = r#"
+| Column 1 | Column 2 |
+|----------|----------|
+| text | <img src="ferris.png" alt="Ferris"> |
+"#;
+            let parser = Parser::new(&md);
+            let md_iter = MarkdownIter(parser);
+            let converted = ConvertHtmlImg::new(md_iter);
+            let events: Vec<_> = converted.collect();
+
+            // Count Start/End Image events
+            let start_image_count = events
+                .iter()
+                .filter(|e| {
+                    matches!(
+                        e,
+                        ParserEvent::Typst(typst::Event::Start(typst::Tag::Image(_, _, _, _, _)))
+                    )
+                })
+                .count();
+
+            let end_image_count = events
+                .iter()
+                .filter(|e| {
+                    matches!(
+                        e,
+                        ParserEvent::Typst(typst::Event::End(typst::Tag::Image(_, _, _, _, _)))
+                    )
+                })
+                .count();
+
+            std::assert_eq!(
+                start_image_count,
+                end_image_count,
+                "Start and End Image events must be balanced"
+            );
+            std::assert_eq!(start_image_count, 1, "Should have exactly 1 image");
         }
     }
 }

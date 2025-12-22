@@ -159,6 +159,15 @@ where
             if this.tables {
                 events = Box::new(ConvertTables::new(events));
             }
+            // Convert HTML <sup> tags to Typst #super[]
+            events = Box::new(ConvertHtmlSup::new(events));
+            // Convert HTML <img> tags to Typst #image()
+            events = Box::new(ConvertHtmlImg::new(events));
+            // Filter out paragraph wrappers around standalone images
+            // (must run after ConvertParagraphs, ConvertImages, and ConvertHtmlImg)
+            if this.paragraphs && this.images {
+                events = Box::new(FilterImageParagraphs::new(events));
+            }
         }
 
         events
