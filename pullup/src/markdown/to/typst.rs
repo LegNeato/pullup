@@ -86,25 +86,56 @@ where
     }
 }
 
-/// Convert a relative markdown path to a Typst label reference.
-/// E.g., "./chapter.md" -> "<chapter>", "../foo/bar.md#section" -> "<foo-bar>"
+/// Convert mdBook internal links to Typst label references.
+/// Only converts links that are clearly internal to the book:
+/// - Paths with .md extension (book source files)
+/// - Same-level or subdirectory paths with .html extension
+/// - Links with anchors to sections within the book
+///
+/// E.g., "./chapter.md" -> "<chapter>"
+///       "../other/section.md#anchor" -> "<anchor>"
+///       "ch01-01-installation.html#troubleshooting" -> "<troubleshooting>"
+///       "ch01-01-installation.html" -> "<ch01-01-installation>"
+///       "../std/prelude/index.html" -> None (external to book)
 fn md_path_to_label(url: &str) -> Option<String> {
-    // Only handle relative paths to .md files
+    // Only handle relative paths, not external URLs
     if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("mailto:") {
         return None;
     }
-    if !url.contains(".md") {
+
+    // Handle both .md and .html extensions (mdBook uses .html in rendered output)
+    let has_md = url.contains(".md");
+    let has_html = url.contains(".html");
+    if !has_md && !has_html {
         return None;
     }
 
-    // Extract the path part (before any # anchor)
-    let path = url.split('#').next().unwrap_or(url);
+    // Reject ../ paths with .html extension (likely external docs like rustdoc)
+    // But allow ../ paths with .md extension (internal book links)
+    if url.starts_with("../") && !has_md {
+        return None;
+    }
 
-    // Remove .md extension and convert to label format
+    // Split into path and anchor parts
+    let mut parts = url.splitn(2, '#');
+    let path = parts.next().unwrap_or(url);
+    let anchor = parts.next();
+
+    // If there's an anchor, use that as the label (for section links within a page)
+    // The heading converter will create labels from heading IDs
+    if let Some(anchor) = anchor {
+        if !anchor.is_empty() {
+            return Some(format!("<{}>", anchor.to_lowercase()));
+        }
+    }
+
+    // No anchor, use the path as label (for chapter links)
+    // Strip leading ./ and ../ path components
     let label = path
         .trim_start_matches("./")
         .trim_start_matches("../")
         .trim_end_matches(".md")
+        .trim_end_matches(".html")
         .replace('/', "-")
         .replace('\\', "-")
         .to_lowercase();
@@ -339,53 +370,205 @@ converter!(
    }
 );
 
-converter!(
-    /// Convert Markdown headings to Typst headings.
-    ConvertHeadings,
-    ParserEvent<'a> => ParserEvent<'a>,
-    |this: &mut Self| {
-        struct TypstLevel(std::num::NonZeroU8);
+/// Generate a URL-friendly ID from text, matching mdBook's algorithm.
+/// mdBook does NOT collapse multiple hyphens, so we preserve them.
+fn generate_heading_id(text: &str) -> String {
+    let result: String = text.chars()
+        .map(|c| {
+            if c.is_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else if c == ' ' || c == '-' || c == '_' {
+                '-'
+            } else {
+                // Skip other characters (punctuation, backticks, etc.)
+                '\0'
+            }
+        })
+        .filter(|&c| c != '\0')
+        .collect();
 
-        impl std::ops::Deref for TypstLevel {
-            type Target = std::num::NonZeroU8;
-            fn deref(&self) -> &Self::Target {
-                &self.0
+    // Trim leading/trailing hyphens only
+    result.trim_matches('-').to_string()
+}
+
+/// Buffered content for heading reconstruction.
+/// Stores events that appear inside headings along with any text for ID generation.
+#[derive(Clone)]
+enum HeadingContent {
+    /// Text content - also contributes to heading ID
+    Text(String),
+    /// Code content - also contributes to heading ID
+    Code(String),
+    /// Soft break
+    SoftBreak,
+    /// Hard break
+    HardBreak,
+    /// Strong emphasis start
+    StrongStart,
+    /// Strong emphasis end
+    StrongEnd,
+    /// Emphasis start
+    EmphasisStart,
+    /// Emphasis end
+    EmphasisEnd,
+}
+
+/// Convert Markdown headings to Typst headings.
+/// Generates heading IDs from text content for cross-referencing.
+pub struct ConvertHeadings<T> {
+    iter: T,
+    /// Buffered heading content to emit
+    buffer: VecDeque<HeadingContent>,
+    /// Text collected for ID generation
+    heading_text: String,
+    /// Current heading level if inside a heading
+    heading_level: Option<markdown::HeadingLevel>,
+    /// Explicit ID from markdown if provided
+    explicit_id: Option<String>,
+    /// Whether we need to emit the heading start
+    emit_start: Option<(std::num::NonZeroU8, Option<String>)>,
+    /// Whether we need to emit the heading end (level, label)
+    emit_end: Option<(std::num::NonZeroU8, Option<String>)>,
+}
+
+impl<'a, T> ConvertHeadings<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    pub fn new(iter: T) -> Self {
+        ConvertHeadings {
+            iter,
+            buffer: VecDeque::new(),
+            heading_text: String::new(),
+            heading_level: None,
+            explicit_id: None,
+            emit_start: None,
+            emit_end: None,
+        }
+    }
+
+    fn level_to_typst(level: markdown::HeadingLevel) -> std::num::NonZeroU8 {
+        use markdown::HeadingLevel;
+        match level {
+            HeadingLevel::H1 => std::num::NonZeroU8::new(1).expect("non-zero"),
+            HeadingLevel::H2 => std::num::NonZeroU8::new(2).expect("non-zero"),
+            HeadingLevel::H3 => std::num::NonZeroU8::new(3).expect("non-zero"),
+            HeadingLevel::H4 => std::num::NonZeroU8::new(4).expect("non-zero"),
+            HeadingLevel::H5 => std::num::NonZeroU8::new(5).expect("non-zero"),
+            HeadingLevel::H6 => std::num::NonZeroU8::new(6).expect("non-zero"),
+        }
+    }
+}
+
+impl<'a, T> Iterator for ConvertHeadings<T>
+where
+    T: Iterator<Item = ParserEvent<'a>>,
+{
+    type Item = ParserEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Emit heading start if pending
+        if let Some((level, label)) = self.emit_start.take() {
+            return Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Heading(
+                level,
+                typst::TableOfContents::Include,
+                typst::Bookmarks::Include,
+                label.map(markdown::CowStr::from),
+            ))));
+        }
+
+        // Emit buffered content - but only AFTER emit_start has been returned
+        // (which means the heading End was processed and emit_end is set)
+        if self.emit_end.is_some() {
+            if let Some(content) = self.buffer.pop_front() {
+                return Some(match content {
+                    HeadingContent::Text(s) => ParserEvent::Markdown(markdown::Event::Text(markdown::CowStr::from(s))),
+                    HeadingContent::Code(s) => ParserEvent::Markdown(markdown::Event::Code(markdown::CowStr::from(s))),
+                    HeadingContent::SoftBreak => ParserEvent::Markdown(markdown::Event::SoftBreak),
+                    HeadingContent::HardBreak => ParserEvent::Markdown(markdown::Event::HardBreak),
+                    HeadingContent::StrongStart => ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong)),
+                    HeadingContent::StrongEnd => ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strong)),
+                    HeadingContent::EmphasisStart => ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis)),
+                    HeadingContent::EmphasisEnd => ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Emphasis)),
+                });
             }
         }
-        impl From<markdown::HeadingLevel> for TypstLevel{
-            fn from(item: markdown::HeadingLevel) -> Self {
-                use markdown::HeadingLevel;
-                match item {
-                    HeadingLevel::H1 => TypstLevel(core::num::NonZeroU8::new(1).expect("non-zero")),
-                    HeadingLevel::H2 => TypstLevel(core::num::NonZeroU8::new(2).expect("non-zero")),
-                    HeadingLevel::H3 => TypstLevel(core::num::NonZeroU8::new(3).expect("non-zero")),
-                    HeadingLevel::H4 => TypstLevel(core::num::NonZeroU8::new(4).expect("non-zero")),
-                    HeadingLevel::H5 => TypstLevel(core::num::NonZeroU8::new(5).expect("non-zero")),
-                    HeadingLevel::H6 => TypstLevel(core::num::NonZeroU8::new(6).expect("non-zero")),
-                }
-            }
+
+        // Emit heading end if pending
+        if let Some((level, label)) = self.emit_end.take() {
+            return Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Heading(
+                level,
+                typst::TableOfContents::Include,
+                typst::Bookmarks::Include,
+                label.map(markdown::CowStr::from),
+            ))));
         }
-        match this.iter.next() {
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Heading { level, .. }))) => {
-                let level: TypstLevel = level.into();
-                Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Heading(*level,
-                    typst::TableOfContents::Include,
-                    typst::Bookmarks::Include,
-                    None,
-                ))))
-            },
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Heading(level))))  => {
-                let level: TypstLevel = level.into();
-                Some(ParserEvent::Typst(typst::Event::End(typst::Tag::Heading(*level,
-                    typst::TableOfContents::Include,
-                    typst::Bookmarks::Include,
-                    None,
-                ))))
-            },
+
+        match self.iter.next() {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Heading { level, id, .. }))) => {
+                // Start collecting heading content
+                self.heading_level = Some(level);
+                self.heading_text.clear();
+                self.explicit_id = id.map(|s| s.to_string());
+                self.next() // Continue to collect content
+            }
+            Some(ParserEvent::Markdown(markdown::Event::Text(text))) if self.heading_level.is_some() => {
+                // Collect text for ID generation and buffer it
+                self.heading_text.push_str(&text);
+                self.buffer.push_back(HeadingContent::Text(text.to_string()));
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::Code(code))) if self.heading_level.is_some() => {
+                // Code in headings contributes to ID
+                self.heading_text.push_str(&code);
+                self.buffer.push_back(HeadingContent::Code(code.to_string()));
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::SoftBreak)) if self.heading_level.is_some() => {
+                self.heading_text.push(' ');
+                self.buffer.push_back(HeadingContent::SoftBreak);
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::HardBreak)) if self.heading_level.is_some() => {
+                self.heading_text.push(' ');
+                self.buffer.push_back(HeadingContent::HardBreak);
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong))) if self.heading_level.is_some() => {
+                self.buffer.push_back(HeadingContent::StrongStart);
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strong))) if self.heading_level.is_some() => {
+                self.buffer.push_back(HeadingContent::StrongEnd);
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis))) if self.heading_level.is_some() => {
+                self.buffer.push_back(HeadingContent::EmphasisStart);
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Emphasis))) if self.heading_level.is_some() => {
+                self.buffer.push_back(HeadingContent::EmphasisEnd);
+                self.next()
+            }
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Heading(level)))) => {
+                let typst_level = Self::level_to_typst(level);
+                // Generate ID from collected text or use explicit ID
+                let id = self.explicit_id.take()
+                    .unwrap_or_else(|| generate_heading_id(&self.heading_text));
+                let label = if id.is_empty() { None } else { Some(id) };
+
+                // Set up to emit: start, buffered content, end
+                self.emit_start = Some((typst_level, label.clone()));
+                self.emit_end = Some((typst_level, label));
+                self.heading_level = None;
+                self.heading_text.clear();
+
+                self.next()
+            }
             x => x,
         }
-   }
-);
+    }
+}
 
 converter!(
     /// Convert Markdown tables to Typst tables.
@@ -470,6 +653,8 @@ mod tests {
 ";
             let i = ConvertHeadings::new(MarkdownIter(Parser::new(&md)));
 
+            // ConvertHeadings now generates labels from heading text for cross-referencing
+            // Strong/Emphasis events inside headings are preserved
             self::assert_eq!(
                 i.collect::<Vec<super::ParserEvent>>(),
                 vec![
@@ -477,31 +662,31 @@ mod tests {
                         NonZeroU8::new(1).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
-                        None,
+                        Some(CowStr::Boxed("greetings".into())),
                     ))),
-                    Markdown(MdEvent::Text(CowStr::Borrowed("Greetings"))),
+                    Markdown(MdEvent::Text(CowStr::Boxed("Greetings".into()))),
                     Typst(TypstEvent::End(TypstTag::Heading(
                         NonZeroU8::new(1).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
-                        None,
+                        Some(CowStr::Boxed("greetings".into())),
                     ))),
                     Typst(TypstEvent::Start(TypstTag::Heading(
                         NonZeroU8::new(2).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
-                        None,
+                        Some(CowStr::Boxed("this-is-rad".into())),
                     ))),
-                    Markdown(MdEvent::Text(CowStr::Borrowed("This is "))),
+                    Markdown(MdEvent::Text(CowStr::Boxed("This is ".into()))),
                     Markdown(MdEvent::Start(MdTag::Strong)),
-                    Markdown(MdEvent::Text(CowStr::Borrowed("rad"))),
+                    Markdown(MdEvent::Text(CowStr::Boxed("rad".into()))),
                     Markdown(MdEvent::End(MdTagEnd::Strong)),
-                    Markdown(MdEvent::Text(CowStr::Borrowed("!"))),
+                    Markdown(MdEvent::Text(CowStr::Boxed("!".into()))),
                     Typst(TypstEvent::End(TypstTag::Heading(
                         NonZeroU8::new(2).unwrap(),
                         typst::TableOfContents::Include,
                         typst::Bookmarks::Include,
-                        None,
+                        Some(CowStr::Boxed("this-is-rad".into())),
                     ))),
                 ]
             );
@@ -625,9 +810,40 @@ See [Chapter 2](./chapter2.md) for more info.
         }
 
         #[test]
-        fn nested_intra_book_link() {
+        fn nested_intra_book_link_with_anchor() {
+            // When a link has an anchor (#anchor), we use the anchor as the label
+            // This matches how mdBook section links work
             let md = "\
 See [Other Section](../other/section.md#anchor) for details.
+";
+            let i = ConvertLinks::new(MarkdownIter(Parser::new(&md)));
+
+            self::assert_eq!(
+                i.collect::<Vec<super::ParserEvent>>(),
+                vec![
+                    Markdown(MdEvent::Start(MdTag::Paragraph)),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("See "))),
+                    Typst(TypstEvent::Start(TypstTag::Link(
+                        typst::LinkType::Content,
+                        CowStr::Boxed("<anchor>".into())
+                    ))),
+                    Markdown(MdEvent::Text(CowStr::Borrowed("Other Section"))),
+                    // Note: End events in pulldown-cmark 0.13 don't carry URL
+                    Typst(TypstEvent::End(TypstTag::Link(
+                        typst::LinkType::Content,
+                        CowStr::Borrowed("")
+                    ))),
+                    Markdown(MdEvent::Text(CowStr::Borrowed(" for details."))),
+                    Markdown(MdEvent::End(MdTagEnd::Paragraph)),
+                ]
+            );
+        }
+
+        #[test]
+        fn nested_intra_book_link_without_anchor() {
+            // When a link has no anchor, we use the path as the label
+            let md = "\
+See [Other Section](../other/section.md) for details.
 ";
             let i = ConvertLinks::new(MarkdownIter(Parser::new(&md)));
 

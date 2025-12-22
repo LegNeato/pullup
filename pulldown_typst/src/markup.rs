@@ -68,7 +68,8 @@ where
                         ),
                     },
                     Tag::Heading(n, _, _, _) => Some(format!("{} ", "=".repeat(n.get().into()))),
-                    // TODO: get the number of backticks / tildes somehow.
+                    // Use 6 backticks to avoid issues with code that contains triple backticks
+                    // (e.g., Rust doc comments with code examples).
                     Tag::CodeBlock(ref fence, ref _display) => {
                         let depth = self.codeblock_queue.len();
                         self.codeblock_queue.push_back(());
@@ -213,7 +214,9 @@ where
                         (Tag::NumberedList(_, _, _), Tag::NumberedList(_, _, _)) => true,
                         // BulletList End events may differ
                         (Tag::BulletList(_, _), Tag::BulletList(_, _)) => true,
-                        // For all other tags (including Heading), require exact match
+                        // Heading End events don't have label (only Start has it)
+                        (Tag::Heading(_, _, _, _), Tag::Heading(_, _, _, _)) => true,
+                        // For all other tags, require exact match
                         _ => &x == start_tag,
                     };
                     assert!(matches, "Tag mismatch: expected {:?}, got {:?}", in_tag, x);
