@@ -124,7 +124,14 @@ converter!(
         match this.iter.next() {
             Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Link { link_type: kind, dest_url: url, .. }))) => {
                 match kind {
-                    markdown::LinkType::Inline => {
+                    markdown::LinkType::Inline
+                    | markdown::LinkType::Reference
+                    | markdown::LinkType::ReferenceUnknown
+                    | markdown::LinkType::Collapsed
+                    | markdown::LinkType::CollapsedUnknown
+                    | markdown::LinkType::Shortcut
+                    | markdown::LinkType::ShortcutUnknown
+                    | markdown::LinkType::WikiLink { .. } => {
                         // Check if this is a relative .md link (intra-book link)
                         if let Some(label) = md_path_to_label(&url) {
                             Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Content, label.into()))))
@@ -139,7 +146,6 @@ converter!(
                         let url = "mailto:".to_string() + url.as_ref();
                         Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(typst::LinkType::Url, url.into()))))
                     },
-                    _ => this.iter.next()
                 }
             },
             Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Link))) => {

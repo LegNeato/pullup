@@ -43,7 +43,10 @@ where
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
+        let event = self.iter.next();
+        #[cfg(feature = "tracing")]
+        tracing::trace!("TypstMarkup processing: {:?}, queue: {:?}", event, self.tag_queue);
+        match event {
             None => None,
             Some(Event::Start(x)) => {
                 let ret = match x {
@@ -202,6 +205,8 @@ where
                         (Tag::Table(_), Tag::Table(_)) => true,
                         // Link End events have empty URL in pulldown-cmark 0.13
                         (Tag::Link(_, _), Tag::Link(_, _)) => true,
+                        // Image End events have empty src/alt in pulldown-cmark 0.13
+                        (Tag::Image(_, _), Tag::Image(_, _)) => true,
                         // CodeBlock End events may have None for language
                         (Tag::CodeBlock(_, _), Tag::CodeBlock(_, _)) => true,
                         // NumberedList End events may have default start in pulldown-cmark 0.13
