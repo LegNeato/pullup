@@ -1,5 +1,5 @@
 use crate::{Event, LinkType, QuoteQuotes, QuoteType, ShowType, TableCellAlignment, Tag};
-use std::{collections::VecDeque, fmt::Write, io::ErrorKind};
+use std::{collections::VecDeque, fmt::Write};
 
 fn typst_escape(s: &str) -> String {
     s.replace('$', "\\$")
@@ -45,7 +45,11 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let event = self.iter.next();
         #[cfg(feature = "tracing")]
-        tracing::trace!("TypstMarkup processing: {:?}, queue: {:?}", event, self.tag_queue);
+        tracing::trace!(
+            "TypstMarkup processing: {:?}, queue: {:?}",
+            event,
+            self.tag_queue
+        );
         match event {
             None => None,
             Some(Event::Start(x)) => {
@@ -115,14 +119,14 @@ where
                         }
                     }
                     Tag::Quote(ref ty, ref quotes, ref attribution) => {
-                        let block = match ty {
-                            &QuoteType::Block => "block: true,",
-                            &QuoteType::Inline => "block: false,",
+                        let block = match *ty {
+                            QuoteType::Block => "block: true,",
+                            QuoteType::Inline => "block: false,",
                         };
-                        let quotes = match quotes {
-                            &QuoteQuotes::DoNotWrapInDoubleQuotes => "quotes: false,",
-                            &QuoteQuotes::WrapInDoubleQuotes => "quotes: true,",
-                            &QuoteQuotes::Auto => "quotes: auto,",
+                        let quotes = match *quotes {
+                            QuoteQuotes::DoNotWrapInDoubleQuotes => "quotes: false,",
+                            QuoteQuotes::WrapInDoubleQuotes => "quotes: true,",
+                            QuoteQuotes::Auto => "quotes: auto,",
                         };
                         match attribution {
                             Some(attribution) => Some(format!(
@@ -304,8 +308,7 @@ where
     W: Write,
 {
     for e in TypstMarkup::new(iter) {
-        w.write_str(&e)
-            .map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
+        w.write_str(&e).map_err(std::io::Error::other)?;
     }
     Ok(())
 }

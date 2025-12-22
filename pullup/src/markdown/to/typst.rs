@@ -76,7 +76,9 @@ where
             // Track code end.
             (
                 _,
-                event @ Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::CodeBlock))),
+                event @ Some(ParserEvent::Markdown(markdown::Event::End(
+                    markdown::TagEnd::CodeBlock,
+                ))),
             ) => {
                 let _ = self.code.pop_back();
                 event
@@ -105,8 +107,7 @@ fn md_path_to_label(url: &str) -> Option<String> {
 
     // Handle same-page anchors (e.g., "#troubleshooting" or "#chapter-troubleshooting")
     // These are converted to Typst label references
-    if url.starts_with('#') {
-        let anchor = &url[1..];
+    if let Some(anchor) = url.strip_prefix('#') {
         if !anchor.is_empty() {
             return Some(format!("<{}>", anchor.to_lowercase()));
         }
@@ -138,8 +139,7 @@ fn md_path_to_label(url: &str) -> Option<String> {
         .trim_start_matches("../")
         .trim_end_matches(".md")
         .trim_end_matches(".html")
-        .replace('/', "-")
-        .replace('\\', "-")
+        .replace(['/', '\\'], "-")
         .to_lowercase();
 
     // If there's an anchor, combine path and anchor to form the label
@@ -392,7 +392,8 @@ converter!(
 /// mdBook does NOT collapse multiple hyphens, so we preserve them.
 /// Underscores are preserved (e.g., macro_rules stays as macro_rules).
 fn generate_heading_id(text: &str) -> String {
-    let result: String = text.chars()
+    let result: String = text
+        .chars()
         .map(|c| {
             if c.is_alphanumeric() || c == '_' {
                 // Preserve alphanumeric and underscores (for things like macro_rules)
@@ -489,12 +490,14 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         // Emit heading start if pending
         if let Some((level, label)) = self.emit_start.take() {
-            return Some(ParserEvent::Typst(typst::Event::Start(typst::Tag::Heading(
-                level,
-                typst::TableOfContents::Include,
-                typst::Bookmarks::Include,
-                label.map(markdown::CowStr::from),
-            ))));
+            return Some(ParserEvent::Typst(typst::Event::Start(
+                typst::Tag::Heading(
+                    level,
+                    typst::TableOfContents::Include,
+                    typst::Bookmarks::Include,
+                    label.map(markdown::CowStr::from),
+                ),
+            )));
         }
 
         // Emit buffered content - but only AFTER emit_start has been returned
@@ -502,14 +505,26 @@ where
         if self.emit_end.is_some() {
             if let Some(content) = self.buffer.pop_front() {
                 return Some(match content {
-                    HeadingContent::Text(s) => ParserEvent::Markdown(markdown::Event::Text(markdown::CowStr::from(s))),
-                    HeadingContent::Code(s) => ParserEvent::Markdown(markdown::Event::Code(markdown::CowStr::from(s))),
+                    HeadingContent::Text(s) => {
+                        ParserEvent::Markdown(markdown::Event::Text(markdown::CowStr::from(s)))
+                    }
+                    HeadingContent::Code(s) => {
+                        ParserEvent::Markdown(markdown::Event::Code(markdown::CowStr::from(s)))
+                    }
                     HeadingContent::SoftBreak => ParserEvent::Markdown(markdown::Event::SoftBreak),
                     HeadingContent::HardBreak => ParserEvent::Markdown(markdown::Event::HardBreak),
-                    HeadingContent::StrongStart => ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong)),
-                    HeadingContent::StrongEnd => ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strong)),
-                    HeadingContent::EmphasisStart => ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis)),
-                    HeadingContent::EmphasisEnd => ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Emphasis)),
+                    HeadingContent::StrongStart => {
+                        ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong))
+                    }
+                    HeadingContent::StrongEnd => {
+                        ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strong))
+                    }
+                    HeadingContent::EmphasisStart => {
+                        ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis))
+                    }
+                    HeadingContent::EmphasisEnd => {
+                        ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Emphasis))
+                    }
                 });
             }
         }
@@ -525,48 +540,70 @@ where
         }
 
         match self.iter.next() {
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Heading { level, id, .. }))) => {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Heading {
+                level,
+                id,
+                ..
+            }))) => {
                 // Start collecting heading content
                 self.heading_level = Some(level);
                 self.heading_text.clear();
                 self.explicit_id = id.map(|s| s.to_string());
                 self.next() // Continue to collect content
             }
-            Some(ParserEvent::Markdown(markdown::Event::Text(text))) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::Text(text)))
+                if self.heading_level.is_some() =>
+            {
                 // Collect text for ID generation and buffer it
                 self.heading_text.push_str(&text);
-                self.buffer.push_back(HeadingContent::Text(text.to_string()));
+                self.buffer
+                    .push_back(HeadingContent::Text(text.to_string()));
                 self.next()
             }
-            Some(ParserEvent::Markdown(markdown::Event::Code(code))) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::Code(code)))
+                if self.heading_level.is_some() =>
+            {
                 // Code in headings contributes to ID
                 self.heading_text.push_str(&code);
-                self.buffer.push_back(HeadingContent::Code(code.to_string()));
+                self.buffer
+                    .push_back(HeadingContent::Code(code.to_string()));
                 self.next()
             }
-            Some(ParserEvent::Markdown(markdown::Event::SoftBreak)) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::SoftBreak))
+                if self.heading_level.is_some() =>
+            {
                 self.heading_text.push(' ');
                 self.buffer.push_back(HeadingContent::SoftBreak);
                 self.next()
             }
-            Some(ParserEvent::Markdown(markdown::Event::HardBreak)) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::HardBreak))
+                if self.heading_level.is_some() =>
+            {
                 self.heading_text.push(' ');
                 self.buffer.push_back(HeadingContent::HardBreak);
                 self.next()
             }
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong))) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Strong)))
+                if self.heading_level.is_some() =>
+            {
                 self.buffer.push_back(HeadingContent::StrongStart);
                 self.next()
             }
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strong))) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Strong)))
+                if self.heading_level.is_some() =>
+            {
                 self.buffer.push_back(HeadingContent::StrongEnd);
                 self.next()
             }
-            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis))) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::Start(markdown::Tag::Emphasis)))
+                if self.heading_level.is_some() =>
+            {
                 self.buffer.push_back(HeadingContent::EmphasisStart);
                 self.next()
             }
-            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Emphasis))) if self.heading_level.is_some() => {
+            Some(ParserEvent::Markdown(markdown::Event::End(markdown::TagEnd::Emphasis)))
+                if self.heading_level.is_some() =>
+            {
                 self.buffer.push_back(HeadingContent::EmphasisEnd);
                 self.next()
             }
@@ -1042,14 +1079,12 @@ I *love* cake!
             )));
 
             let events: Vec<_> = i.collect();
-            assert!(events.iter().any(|e| matches!(
-                e,
-                Typst(TypstEvent::Start(TypstTag::Strikethrough))
-            )));
-            assert!(events.iter().any(|e| matches!(
-                e,
-                Typst(TypstEvent::End(TypstTag::Strikethrough))
-            )));
+            assert!(events
+                .iter()
+                .any(|e| matches!(e, Typst(TypstEvent::Start(TypstTag::Strikethrough)))));
+            assert!(events
+                .iter()
+                .any(|e| matches!(e, Typst(TypstEvent::End(TypstTag::Strikethrough)))));
         }
     }
 

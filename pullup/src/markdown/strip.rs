@@ -64,7 +64,12 @@ is anybody in there?
             self::assert_eq!(
                 i.collect::<Vec<markdown::Event>>(),
                 vec![
-                    MdEvent::Start(MdTag::Heading { level: HeadingLevel::H1, id: None, classes: vec![], attrs: vec![] }),
+                    MdEvent::Start(MdTag::Heading {
+                        level: HeadingLevel::H1,
+                        id: None,
+                        classes: vec![],
+                        attrs: vec![]
+                    }),
                     MdEvent::Text(CowStr::Borrowed("Hello")),
                     MdEvent::End(MdTagEnd::Heading(HeadingLevel::H1)),
                     MdEvent::Start(MdTag::Paragraph),

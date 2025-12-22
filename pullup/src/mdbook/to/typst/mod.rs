@@ -107,8 +107,7 @@ pub struct ConvertChapter<'a, T> {
 fn chapter_path_to_label(path: &std::path::Path) -> String {
     path.to_string_lossy()
         .trim_end_matches(".md")
-        .replace('/', "-")
-        .replace('\\', "-")
+        .replace(['/', '\\'], "-")
         .to_lowercase()
 }
 
@@ -207,7 +206,12 @@ where
             }
             // Heading start in a chapter.
             Some(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                markdown::Event::Start(markdown::Tag::Heading { level, id, classes, attrs }),
+                markdown::Event::Start(markdown::Tag::Heading {
+                    level,
+                    id,
+                    classes,
+                    attrs,
+                }),
             ))) => {
                 #[cfg(feature = "tracing")]
                 tracing::trace!("heading start: {}", level);
@@ -243,7 +247,11 @@ where
                 let new_id = match (self.current_chapter_label(), &id) {
                     (Some(chapter_label), Some(existing_id)) => {
                         // Mark as complete with "!" - ConvertHeadings will use as-is
-                        Some(CowStr::from(format!("!{}-{}", chapter_label, existing_id.to_lowercase())))
+                        Some(CowStr::from(format!(
+                            "!{}-{}",
+                            chapter_label,
+                            existing_id.to_lowercase()
+                        )))
                     }
                     (Some(chapter_label), None) => {
                         // Just the chapter prefix - ConvertHeadings will append generated ID
@@ -254,7 +262,12 @@ where
 
                 self.buf
                     .push_back(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                        markdown::Event::Start(markdown::Tag::Heading { level: new_level, id: new_id, classes, attrs }),
+                        markdown::Event::Start(markdown::Tag::Heading {
+                            level: new_level,
+                            id: new_id,
+                            classes,
+                            attrs,
+                        }),
                     )));
                 self.next()
             }
@@ -293,12 +306,15 @@ where
             }
             // Link start in a chapter - handle same-page anchors.
             Some(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                markdown::Event::Start(markdown::Tag::Link { link_type, dest_url, title, id }),
+                markdown::Event::Start(markdown::Tag::Link {
+                    link_type,
+                    dest_url,
+                    title,
+                    id,
+                }),
             ))) => {
                 // Check if this is a same-page anchor link (starts with #)
-                let new_url = if dest_url.starts_with('#') {
-                    // Extract the anchor without the #
-                    let anchor = &dest_url[1..];
+                let new_url = if let Some(anchor) = dest_url.strip_prefix('#') {
                     if let Some(chapter_label) = self.current_chapter_label() {
                         // Prefix the anchor with the chapter label
                         CowStr::from(format!("#{}-{}", chapter_label, anchor.to_lowercase()))
@@ -311,7 +327,12 @@ where
 
                 self.buf
                     .push_back(ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                        markdown::Event::Start(markdown::Tag::Link { link_type, dest_url: new_url, title, id }),
+                        markdown::Event::Start(markdown::Tag::Link {
+                            link_type,
+                            dest_url: new_url,
+                            title,
+                            id,
+                        }),
                     )));
                 self.next()
             }
@@ -324,7 +345,8 @@ where
                     if let Some(chapter_label) = self.current_chapter_label() {
                         // Create a Typst label with chapter prefix
                         let label = format!("{}-{}", chapter_label, anchor_id.to_lowercase());
-                        self.buf.push_back(ParserEvent::Typst(typst::Event::Label(label.into())));
+                        self.buf
+                            .push_back(ParserEvent::Typst(typst::Event::Label(label.into())));
                         return self.next();
                     }
                 }
@@ -341,7 +363,8 @@ where
                     if let Some(chapter_label) = self.current_chapter_label() {
                         // Create a Typst label with chapter prefix
                         let label = format!("{}-{}", chapter_label, anchor_id.to_lowercase());
-                        self.buf.push_back(ParserEvent::Typst(typst::Event::Label(label.into())));
+                        self.buf
+                            .push_back(ParserEvent::Typst(typst::Event::Label(label.into())));
                         return self.next();
                     }
                 }
@@ -398,9 +421,9 @@ fn extract_html_anchor_id(html: &str) -> Option<String> {
         id: RefCell::new(None),
     };
     let tokenizer = Tokenizer::new(sink, TokenizerOpts::default());
-    let mut buffer = BufferQueue::default();
+    let buffer = BufferQueue::default();
     buffer.push_back(html.into());
-    let _ = tokenizer.feed(&mut buffer);
+    let _ = tokenizer.feed(&buffer);
     tokenizer.end();
 
     tokenizer.sink.id.into_inner()
@@ -636,9 +659,9 @@ mod tests {
 
         // Find the link event and check its URL was prefixed
         let link_url = result.iter().find_map(|e| match e {
-            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(
-                markdown::Event::Start(markdown::Tag::Link { dest_url, .. }),
-            )) => Some(dest_url.as_ref()),
+            ParserEvent::Mdbook(mdbook::Event::MarkdownContentEvent(markdown::Event::Start(
+                markdown::Tag::Link { dest_url, .. },
+            ))) => Some(dest_url.as_ref()),
             _ => None,
         });
 
@@ -658,9 +681,7 @@ mod tests {
 
         // Find the link event and check its URL
         let link_url = result.iter().find_map(|e| match e {
-            ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(_, url))) => {
-                Some(url.as_ref())
-            }
+            ParserEvent::Typst(typst::Event::Start(typst::Tag::Link(_, url))) => Some(url.as_ref()),
             _ => None,
         });
 
@@ -743,13 +764,22 @@ mod tests {
     #[test]
     fn extract_html_anchor_id_not_anchor() {
         // html5ever parses any tag, so we only extract from <a> tags
-        assert_eq!(super::extract_html_anchor_id(r#"<div id="foo"></div>"#), None);
-        assert_eq!(super::extract_html_anchor_id(r#"<span id="foo"></span>"#), None);
+        assert_eq!(
+            super::extract_html_anchor_id(r#"<div id="foo"></div>"#),
+            None
+        );
+        assert_eq!(
+            super::extract_html_anchor_id(r#"<span id="foo"></span>"#),
+            None
+        );
     }
 
     #[test]
     fn extract_html_anchor_id_no_id() {
-        assert_eq!(super::extract_html_anchor_id(r##"<a href="#foo"></a>"##), None);
+        assert_eq!(
+            super::extract_html_anchor_id(r##"<a href="#foo"></a>"##),
+            None
+        );
     }
 
     /// Helper to create an inline HTML event.
@@ -813,7 +843,7 @@ mod tests {
                 // Extract label name from <label-name>
                 let s = url.as_ref();
                 if s.starts_with('<') && s.ends_with('>') {
-                    Some(s[1..s.len()-1].to_string())
+                    Some(s[1..s.len() - 1].to_string())
                 } else {
                     None
                 }
@@ -822,8 +852,14 @@ mod tests {
         });
 
         // Both should produce the same label
-        assert_eq!(anchor_label, Some("ch01-01-installation-troubleshooting".to_string()));
-        assert_eq!(link_target, Some("ch01-01-installation-troubleshooting".to_string()));
+        assert_eq!(
+            anchor_label,
+            Some("ch01-01-installation-troubleshooting".to_string())
+        );
+        assert_eq!(
+            link_target,
+            Some("ch01-01-installation-troubleshooting".to_string())
+        );
         assert_eq!(anchor_label, link_target);
     }
 }

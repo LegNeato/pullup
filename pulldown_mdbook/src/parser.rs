@@ -195,13 +195,13 @@ where
                 // Synthesize starting part, and end the first part where the second
                 // part starts.
                 let (inside, outside) = events.split_at(first_start);
-                return iter::once(Event::Start(Tag::Part(None, None)))
+                iter::once(Event::Start(Tag::Part(None, None)))
                     .chain(inside.iter().cloned())
                     .chain(iter::once(Event::End(Tag::Part(None, None))))
                     .chain(outside.iter().cloned())
                     // Put our new end on.
                     .chain(iter::once(end))
-                    .collect();
+                    .collect()
             } else {
                 // Just the end.
                 events.iter().cloned().chain(iter::once(end)).collect()
